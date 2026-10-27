@@ -1,0 +1,18 @@
+# projalysis v0.32(README の修正): 1 行目のプロジェクト計画へのリンクが「https://plan.sapp.jp)の」まで URL になっていたのを、明示したリンクに直した。ほかのファイルは v0.32 と同じ
+# すべて投入可。リポジトリのルートで展開する
+da95a8258ce72b80dd2dc04ede2ad1cb  index.html
+5ec64f26876e09835b1e5e225c805086  LICENSE
+e2cda8ac549be5e2364e1192bd360b1a  README.md
+bd3dd204cef829c60317a913e437886c  docs/spec.md
+80d7dfac7d725305a8343571df57e331  dev/core.js
+3270aed73a2d579dfd864c610d1a8658  dev/diff.js
+626a4283910deee0f2c99424b81b60bb  dev/ui.js
+d10e44754875b472ca54564944fc2110  dev/usage.html
+0e7a41f08c5ba79d0ab939b7f1aa9e15  dev/build.py
+e033dd758d0f12961cc9982d991ce85d  test/diff_test.cjs
+8a9b9c5b1a1cff52b8c68f170ef928d1  test/ui_test.py
+460ef7701705d50fb0edf0b5f6837567  test/v1.plan
+41b2a0042450e332e67e332909af93f0  test/v2.plan
+d5e6fa744a6687c626accfd87e1a9c3c  test/v3.plan
+3b104ee7ea57767287cd93184b6052d0  test/err.plan
+65e73bb531aeb0deb3b929788fca1e04  test/nover.plan
