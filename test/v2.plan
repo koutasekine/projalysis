@@ -1,0 +1,59 @@
+version: 2026-05-01
+start: 2026-04-23
+end: 2026-05-14
+
+members:
+- 青木
+- 井上
+- 上田 off: sat
+- 江藤
+
+FBS: カレンダーアプリ
+- 予定管理
+  - 日時の設定 mop*: 開始と終了の日時を 1 分単位で登録できる mop: 終了が開始より前なら登録できない
+  - 場所の設定 mop*: 場所を 100 文字まで登録できる
+- 通知
+  - 登録確認メール mop: 予定の登録から 1 分以内にメールが届く
+  - リマインドメール mop: 予定の 30 分前にメールが届く note: 時刻はサーバーの時計
+- 予定の共有
+  - アカウント登録 mop*: メールアドレスとパスワードで登録できる
+  - 共有ユーザの選択 mop: 登録済みのユーザを 5 人まで選べる
+
+PBS: カレンダーアプリ
+- 画面/UI
+  - カレンダ画面 realizes: 日時の設定, 場所の設定
+  - 予定登録画面 realizes: 日時の設定, 場所の設定, 共有ユーザの選択
+- RestAPI
+  - 予定登録API realizes: 日時の設定, 場所の設定, 共有ユーザの選択
+  - ユーザ登録API realizes: アカウント登録
+  - 通知API realizes: 登録確認メール, リマインドメール
+- データベース
+  - テーブル realizes: 日時の設定, 場所の設定, アカウント登録
+  - スキーマ realizes: アカウント登録, 共有ユーザの選択
+
+WBS: カレンダーアプリ
+- 設計フェーズ
+  - 基本設計
+    - カレンダデザイン for: カレンダ画面 days: 1 by: 青木 status: done
+  - 詳細設計
+    - 予定登録CRUD用API URI for: 予定登録API days: 1 by: 井上 status: done
+    - ユーザ登録CRUD用API URI for: ユーザ登録API days: 1 by: 上田 status: done
+    - 通知API URI for: 通知API days: 1 by: 青木 status: done
+    - データベーススキーム設計 for: スキーマ days: 1 by: 上田 status: done
+- 実装フェーズ
+  - 画面実装
+    - カレンダー画面の実装 for: カレンダ画面 days: 1 by: 青木 after: カレンダデザイン status: done
+  - API実装
+    - 予定登録CRUD用APIの実装 for: 予定登録API days: 9 by: 井上, 青木 after: 予定登録CRUD用API URI status: doing
+    - ユーザ登録CRUD用APIの実装 for: ユーザ登録API days: 3 by: 上田 after: ユーザ登録CRUD用API URI status: done
+    - 通知用APIの実装 for: 通知API days: 3 by: 青木 after: 通知API URI status: blocked
+  - データベース実装
+    - データベースの実装 for: テーブル, スキーマ days: 2 by: 上田 after: データベーススキーム設計 status: done
+- テストフェーズ
+  - 単体テスト
+    - カレンダー画面テスト for: カレンダ画面 days: 1 by: 上田 after: カレンダー画面の実装
+  - 結合テスト
+    - 予定登録APIとデータベースの接続テスト for: 予定登録API, テーブル days: 3 by: 上田 after: 予定登録CRUD用APIの実装, データベースの実装
+    - ユーザ登録APIとデータベースの接続テスト for: ユーザ登録API, テーブル days: 2 by: 上田 after: ユーザ登録CRUD用APIの実装, データベースの実装
+    - 通知用APIとデータベースの接続テスト for: 通知API, テーブル days: 2 by: 青木 after: 通知用APIの実装, データベースの実装
+    - 予定入力画面と予定登録APIの接続テスト for: 予定登録画面, 予定登録API days: 3 by: 上田 after: カレンダー画面テスト, 予定登録APIとデータベースの接続テスト
