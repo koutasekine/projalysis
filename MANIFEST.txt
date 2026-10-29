@@ -1,18 +1,18 @@
-# プロジェクト分析 v0.59(仕様書 版 0.51)。リポジトリのルートに展開する。全ファイル投入可。
-# 変更: README・書き方(使い方)に「ほかのアプリとの関係」の節を足した(計画書の要・不要、組み合わせの例。組み合わせ方はプロジェクトを運営する人が決める)。仕様書 1.2 節にも同じ関係を書いた。コードの変更なし
+# プロジェクト分析 v0.60(仕様書 版 0.52)。リポジトリのルートに展開する。全ファイル投入可。
+# 変更: README・書き方(使い方)の「ほかのアプリとの関係」を一般の利用向けに書き直した。マイログは単体でも記録帳として使えること、プロジェクト分析は計画書だけ・マイログだけ・両方のどれでも読めることを書き、組み合わせの例を 6 つ(そのアプリが入るもの)にした。組み合わせ方は使う人が決める。仕様書 1.2 節も合わせた。コードの変更なし
 # 検査の期待値の変更: なし
 b84a309c5a14557889cd4a5a06e3f219  CNAME
 5ec64f26876e09835b1e5e225c805086  LICENSE
-ca0fc2d7c3ac10243cbb73c9a127eab2  README.md
+6d6a5b8c44696c5d8233d28bbe919f70  README.md
 114e93a8421ffbecdd30a88a318b7c65  dev/build.py
 2cfb2f3e65ac56f02435e821f147e7c4  dev/core.js
 b6db8a28354376c4205caf22eebd5711  dev/diff.js
 69924165a054f7e6110c0194de99c134  dev/logcore.js
 265bebc918c77d1197723b1c13b87621  dev/team.js
 e3d53591b82d01cdbb20a2d41ffafafe  dev/ui.js
-8d39f7bbdda218ef6119ea26f8eac8f3  dev/usage.html
-4a62eab2552d603be841190840322439  docs/spec.md
-89db9e0735b0a48bde961b19bb7c0b01  index.html
+4456697e3d87b899b705ffe7877cd131  dev/usage.html
+93a7280c5ee07e4eba4a3d604e0bfb2f  docs/spec.md
+f2f6c20d11c4810667427a1733764504  index.html
 f3bb78eccb9ad0f02c9f60ab8f60bbe4  test/diff_test.cjs
 3b104ee7ea57767287cd93184b6052d0  test/err.plan
 fc3245f8f33b9d54e53fe4227c5b4db7  test/flow/v1_src.plan
