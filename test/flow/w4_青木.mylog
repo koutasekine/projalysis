@@ -1,0 +1,42 @@
+by: 青木
+week: mon
+
+- 2026-11-02
+  - 画面設計 hours: 4 status: doing progress: 30
+- 2026-11-03
+  - 画面設計 hours: 5 progress: 90 review: 井上
+- 2026-11-04
+  - 画面設計 hours: 1 status: done progress: 100
+  - 登録画面の実装 hours: 4 status: doing progress: 20
+- 2026-11-05
+  - 登録画面の実装 hours: 5 progress: 40 issue: バーコード読み取りのライブラリが動かない
+- 2026-11-06
+  - 登録画面の実装 hours: 3 status: blocked
+- 2026-11-09
+  - 本の登録画面の実装 hours: 3 progress: 50
+- 2026-11-10
+  - 登録画面の実装 solved: 別のライブラリに替えた
+  - 本の登録画面の実装 status: doing
+- 2026-11-11
+  - 本の登録画面の実装 hours: 5 status: done progress: 100
+  - 検索画面の実装 hours: 2 status: doing progress: 10
+- 2026-11-12
+  - 検索画面の実装 hours: 5 progress: 60 review: 井上
+- 2026-11-13
+  - 検索画面の実装 hours: 4 status: done progress: 100
+- 2026-11-16
+  - 総合試験 hours: 2 note: 計画を立てた
+- 2026-11-17
+  - 画面の実装 hours: 1 status: doing note: 細かい修正
+- 2026-11-18
+  - 画面の実装 hours: 2 status: done progress: 100
+- 2026-11-19
+  - 貸出の記録 test: ng mop: 貸出と返却を記録できる
+- 2026-11-24
+  - 総合試験 hours: 4 status: doing progress: 20
+- 2026-11-25
+  - 総合試験 hours: 5 progress: 50 ask: 井上
+- 2026-11-30
+  - 総合試験 hours: 3 progress: 80
+- 2026-12-01
+  - 総合試験 hours: 2 status: done progress: 100 review: 井上

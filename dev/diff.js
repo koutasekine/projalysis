@@ -91,7 +91,7 @@ const countOf = (m) => { const matched = m.A.filter((a) => m.map.has(a)).length;
 // ================= 比べる(仕様書 5 章) =================
 const uniq = (a) => [...new Set(a)];
 const setEq = (x, y) => { const a = uniq(x), b = uniq(y); return a.length === b.length && a.every((v) => b.includes(v)); };
-const listText = (a) => (a.length ? a.join('、') : 'なし');
+const listText = (a) => (a.length ? a.join('・') : 'なし'); // 人や名前の並びは「・」でつなぐ(項目の区切りの「、」と見分けるため)
 const offText = (r) => (r.sec.off ? r.text.slice(r.sec.off.start, r.sec.off.end).replace(/^off:/, '').trim() : '');
 // 休みの値を比べるための形(カンマで区切り、空白を除いて並べ替える)。空白や並びだけの違いは変更としない(5.13 節)
 const offKey = (s) => (s ?? '').split(',').map((x) => x.replace(/\s+/g, '')).filter(Boolean).sort().join(','); // 値の中の空白(`..` の前後など)も除く
@@ -99,7 +99,7 @@ const memberOff = (m) => (m.attrList.find((a) => a.key === 'off')?.text ?? '').t
 // タスクに効いている先行: そのタスクと祖先に書いた after: が指す要素(下のタスクには広げない。仕様書 5.4 節)
 function effAfter(t) { const out = []; for (let x = t; x; x = x.parent) for (const y of x.R.after ?? []) if (!out.includes(y)) out.push(y); return out; }
 
-// 概要(全版。仕様書 5.1 節)の行
+// サマリー(全版。仕様書 5.1 節)の行
 const elemCount = (r, key) => (r.sec[key] ? String(r.bySec[key].filter((n) => n.parent).length) : '―');
 const OVERVIEW_ROWS = [
   ['版', (e, lab) => lab.get(e)],
@@ -112,14 +112,14 @@ const OVERVIEW_ROWS = [
   ['終了日', (e) => (e.r.sched.finishDate === null ? '―' : P.fmtDate(e.r.sched.finishDate))],
   ['メンバー数', (e) => String(e.r.members.length)],
   // 要素数は 4.5 節と同じ数え方(途中の要素を含み、根は数えない)。節がなければ「―」
-  ['FBS 要素数', (e) => elemCount(e.r, 'FBS')],
-  ['PBS 要素数', (e) => elemCount(e.r, 'PBS')],
-  ['WBS 要素数', (e) => elemCount(e.r, 'WBS')],
+  ['FBS の要素の数', (e) => elemCount(e.r, 'FBS')],
+  ['PBS の要素の数', (e) => elemCount(e.r, 'PBS')],
+  ['WBS の要素の数', (e) => elemCount(e.r, 'WBS')],
   ['タスク数', (e) => String(e.r.tasks.length)],
   ['総日数', (e) => P.fmtDays(e.r.tasks.reduce((a, t) => a + t.days, 0))],
-  // MOP 総数は mop: と mop*: の合計。確認した MOP 数は mop*: の数
+  // MOP 総数は mop: と mop*: の合計。チェック済みの MOP 数は mop*: の数
   ['MOP 総数', (e) => (e.r.sec.FBS ? String(e.r.bySec.FBS.reduce((a, n) => a + n.mops.length, 0)) : '―')],
-  ['確認した MOP 数', (e) => (e.r.sec.FBS ? String(e.r.bySec.FBS.reduce((a, n) => a + n.mopChecked.filter(Boolean).length, 0)) : '―')],
+  ['チェック済みの MOP 数', (e) => (e.r.sec.FBS ? String(e.r.bySec.FBS.reduce((a, n) => a + n.mopChecked.filter(Boolean).length, 0)) : '―')],
   ['警告数', (e) => String(e.nWarn)],
 ];
 function overview(list) {
@@ -231,12 +231,18 @@ const COL = { line: '#333', grid: '#c8c8c4', head: '#f4f4f2', text: '#222', sub:
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const charW = (ch, fs) => (/[\u0000-\u024f\uff61-\uff9f]/.test(ch) ? 0.6 : 1) * fs;
 const textW = (s, fs) => [...s].reduce((a, ch) => a + charW(ch, fs), 0);
+const NOHEAD = '、。，．,.)）」』】〕〉》・：；:;!！?？ー…'; // 行頭に置かない文字(行頭禁則。前の行の最後の文字ごと次の行へ送る)
 function wrap(s, maxW, fs) {
   const out = [];
   let cur = '', w = 0;
   for (const ch of s) {
     const cw = charW(ch, fs);
-    if (w + cw > maxW && cur) { out.push(cur); cur = ''; w = 0; }
+    if (w + cw > maxW && cur) {
+      // 行頭禁則: 送る文字が行頭に置けないときは、前の行の最後の文字も次の行へ送る
+      // 送る文字の前も行頭に置けない文字なら、さらに前の文字まで送る(行は空にしない)
+      if (NOHEAD.includes(ch) && [...cur].length > 1) { const k = [...cur]; const mv = []; do { mv.unshift(k.pop()); } while (k.length > 1 && NOHEAD.includes(mv[0])); out.push(k.join('')); cur = mv.join(''); w = textW(cur, fs); }
+      else { out.push(cur); cur = ''; w = 0; }
+    }
     cur += ch; w += cw;
   }
   if (cur) out.push(cur);
@@ -300,7 +306,7 @@ const TEXT_W = 900;
 const textLines = (b) => wrap(b.text, TEXT_W, b.fs);
 const blockH = (b) => (b.kind === 'text' ? b.fs + (textLines(b).length - 1) * (b.fs + 6) + 10 : b.kind === 'gap' ? b.h : 0);
 // 部品を上から並べて 1 枚の SVG にする。ws: 表ごとの列の幅(印刷で分けたときも全体と同じ幅にするため)
-// anchors: 題の位置を集める配列(画面で題の右にボタンを置くため。仕様書 6.2 節・7.3 節)。図そのものには何も足さない
+// anchors: 題の位置を集める配列(画面で題の右にボタンを置くため。仕様書 8.2 節・9.3 節)。図そのものには何も足さない
 function compose(blocks, anchors = null) {
   const out = [];
   let y = M, w = 0;
@@ -444,7 +450,7 @@ function endLabels(items) {
 }
 const legend = (x, items) => { let out = '', cx = x; for (const it of items) { out += it.mark(cx, 14) + T_(cx + 18, 18, it.text, { fs: 11 }); cx += 26 + textW(it.text, 11); } return { svg: out, w: cx - x }; };
 
-// A. 終わりの日の推移
+// A. 終了日の推移
 function chartA(rows) {
   const n = rows.length, w = Math.max(360, n * STEP), xs = (k) => LM + STEP / 2 + k * STEP;
   const vals = rows.flatMap((r) => [r.finish, r.end]).filter((v) => v !== null);
@@ -504,7 +510,7 @@ function chartD(rows) {
     if (r.mop) { const t = `MOP ${r.mop.checked}/${r.mop.total}`; b += T_(xs(k) - textW(t, 11) / 2, TOPM + PLOT_H + 46, t, { fs: 11, fill: COL.sub }); }
   });
   const lg = legend(LM, ['todo', 'doing', 'done', 'blocked'].map((st) => ({ text: P.STATUS[st], mark: (x, y) => `<rect x="${x}" y="${y - 6}" width="12" height="12" fill="${STATUS_FILL[st]}" stroke="${COL.line}"/>` })));
-  const mopNote = rows.some((r) => r.mop) ? T_(LM, TOPM + PLOT_H + 64, '棒の上: タスク数。棒の下: 確認済みの MOP 数 / MOP 数。', { fs: 11, fill: COL.sub }) : '';
+  const mopNote = rows.some((r) => r.mop) ? T_(LM, TOPM + PLOT_H + 64, '棒の上: タスク数。棒の下: チェック済みの MOP 数 / MOP 数。', { fs: 11, fill: COL.sub }) : '';
   return fig(Math.max(LM + w + 20, LM + lg.w), TOPM + PLOT_H + (mopNote ? 72 : 40), lg.svg + b + mopNote);
 }
 // I. 変更が多かった部分(行は WBS の第 1 層の要素、列は隣り合う版の組)
@@ -739,7 +745,7 @@ function trendBlocks(list, blocks, tables) {
   blocks.push(txt('推移', { fs: 15, weight: '600' }));
   if (!t.vs.length) return { message: '比較できる版がありません(エラーがなく version: のある .plan が必要です)' };
   const n = t.vs.length;
-  // 図ごとに保存できるよう、図に題と識別子(ファイル名に使う)を付けておく(7.3 節・7.4 節)
+  // 図ごとに保存できるよう、図に題と識別子(ファイル名に使う)を付けておく(9.3 節・9.4 節)
   const add = (id, title, chart) => { blocks.push({ kind: 'gap', h: 6 }); const tb = txt(title, { fs: 13, weight: '600' }); tb.anchor = { kind: 'fig', id }; blocks.push(tb); const f = chart.draw(0, chart.n); f.chart = chart; f.fig = { id, title, pre: [tb] }; blocks.push(f); };
   add('end', '終了日の推移', { n, draw: (a, b) => chartA(t.A.slice(a, b)) });
   add('burnup', 'バーンアップ(横軸は版の日付)', { n: t.E.length, draw: (a, b) => chartE(t.E.slice(a, b)) });
@@ -749,7 +755,7 @@ function trendBlocks(list, blocks, tables) {
   add('effort', '担当者ごとの作成の日数', { n, draw: (a, b) => chartH(t.H, t.names, a, b) });
   blocks.push({ kind: 'gap', h: 10 });
   const fc = firstChanges(list);
-  section(blocks, tables, 'タスクの進捗が初めて変わった版', ['タスク', '問題発生', '完了', '完了の時期', '現在の進捗'], fc);
+  section(blocks, tables, 'タスクの進捗が初めて変わった版', ['タスク', '問題発生', '完了', '完了の時期', '計画の進捗'], fc);
   return {};
 }
 function overlayBlocks(pair, lab, blocks, tables) {
@@ -780,7 +786,7 @@ function estimateBlocks(pair, lab, blocks) {
   const tG = txt('見積もりの変化', { fs: 15, weight: '600' });
   tG.anchor = { kind: 'fig', id: 'estimate' };
   blocks.push(tG);
-  const tN = txt(`計画外のタスク: ${o.unplanned === null ? '―' : `${o.unplanned}%`}(追加したタスクの日数 ÷ 変更後の総日数) / 削除したタスク: ${P.fmtDays(o.removedDays)} 日 / 共通のタスク: ${P.fmtDays(o.pairDays[0])} → ${P.fmtDays(o.pairDays[1])} 日`, { fs: 12 });
+  const tN = txt(`追加したタスクの割合: ${o.unplanned === null ? '―' : `${o.unplanned}%`}(追加したタスクの日数 ÷ 変更後の総日数) / 削除したタスク: ${P.fmtDays(o.removedDays)} 日 / 共通のタスク: ${P.fmtDays(o.pairDays[0])} → ${P.fmtDays(o.pairDays[1])} 日`, { fs: 12 });
   blocks.push(tN);
   const fG = chartG(o, 0, o.est.length); fG.chart = { n: o.est.length, draw: (a, b) => chartG(o, a, b), rows: true, page: true };
   fG.fig = { id: 'estimate', title: '見積もりの変化', pre: [head, tG, tN] };
@@ -805,13 +811,13 @@ function revisionHistory(list) {
     c.tasks.status.forEach((x) => push('タスクの進捗', '変更', `${x.key}(${x.from} → ${x.to})`));
     for (const [k, t] of [['FBS', c.fbs], ['PBS', c.pbs]]) {
       const withMop = (x) => (k === 'FBS' && x[1] !== 'なし' ? `${x[0]}(MOP: ${x[1]})` : x[0]);
-      t.added.forEach((x) => push(`${k} 要素`, '追加', withMop(x)));
-      t.removed.forEach((x) => push(`${k} 要素`, '削除', withMop(x)));
-      t.moved.forEach((x) => push(`${k} 要素`, '移動', `${x.key}(親: ${x.from} → ${x.to})`));
+      t.added.forEach((x) => push(`${k} の要素`, '追加', withMop(x)));
+      t.removed.forEach((x) => push(`${k} の要素`, '削除', withMop(x)));
+      t.moved.forEach((x) => push(`${k} の要素`, '移動', `${x.key}(親: ${x.from} → ${x.to})`));
     }
-    for (const [op, arr] of [['追加', c.mop.added], ['削除', c.mop.removed], ['確認', c.mop.checked], ['確認取り消し', c.mop.unchecked]]) arr.forEach((x) => push('MOP', op, `${x[0]}: ${x[1]}`));
+    for (const [op, arr] of [['追加', c.mop.added], ['削除', c.mop.removed], ['チェック', c.mop.checked], ['チェックの取り消し', c.mop.unchecked]]) arr.forEach((x) => push('MOP', op, `${x[0]}: ${x[1]}`));
     c.roots.forEach((x) => push(`${x.sec} の根の名前`, '変更', `${x.from} → ${x.to}`));
-    // 開始日・期限・全体の休み(概要の表と同じ値で比べる)
+    // 開始日・期限・全体の休み(サマリーの表と同じ値で比べる)
     const pr = vs[i - 1].r;
     const startOf = (r) => P.fmtDate(r.sec.start.date), endOf = (r) => (r.sec.end ? P.fmtDate(r.sec.end.date) : 'なし'), offOf = (r) => offText(r) || 'なし';
     const same = (target, x, y) => (target === '全体の休み' ? offKey(x === 'なし' ? '' : x) === offKey(y === 'なし' ? '' : y) : x === y);
@@ -842,7 +848,7 @@ function historyBlocks(list, blocks, tables) {
 
 const VIEWS = [
   // all: すべての版を示すビュー(比較する版の帯を出さない)
-  { id: 'overview', label: '概要', all: true },
+  { id: 'overview', label: 'サマリー', all: true },
   { id: 'history', label: '改訂履歴', all: true },
   { id: 'trend', label: '推移', all: true },
   { id: 'tasks', label: 'WBS' },
@@ -858,16 +864,20 @@ function summaryBlocks(c, lab, blocks, tables) {
   section(blocks, tables, '対応した要素', ['節', '対応数 / 要素数'], c.counts.map((x) => [x.sec, `${x.matched} / ${x.total}`]), { noCount: true });
 }
 // ビューを作る。戻り値 { blocks, tables, message }
-function build(list, view, pair) {
+// opt.work: 概要に置く作業の概要(仕様書 7.2 節。{ head, rows: [[項目, 値]] })。マイログがないときは置かない
+function build(list, view, pair, opt = {}) {
   const blocks = [], tables = [];
   const lab = labels(list);
   if (view === 'overview') {
     const o = overview(list);
-    const to = txt('概要', { fs: 15, weight: '600' });
+    const to = txt('サマリー', { fs: 15, weight: '600' });
     blocks.push(to);
-    if (!o.cols.length) return { blocks, tables, message: '比較できる版がありません(エラーがなく version: のある .plan が必要です)' };
+    const noVer = '比較できる版がありません(エラーがなく version: のある .plan が必要です)';
+    if (!o.cols.length && !opt.work) return { blocks, tables, message: noVer };
+    if (!o.cols.length) blocks.push(txt(noVer, { fs: 13 }));
+    else {
     const tbl = {
-      title: '概要', header: ['項目', ...o.cols.map((e) => lab.get(e))],
+      title: 'サマリー', header: ['項目', ...o.cols.map((e) => lab.get(e))],
       // ファイル名は版ごとに違うのが普通なので、太字にしない
       rows: o.rows.slice(1).map((r) => ({ cells: [r.name, ...r.values.map((v, i) => (r.name !== 'ファイル' && i > 0 && (r.name === '全体の休み' ? offKey(v === '―' ? '' : v) !== offKey(r.values[i - 1] === '―' ? '' : r.values[i - 1]) : v !== r.values[i - 1]) ? { t: v, bold: true } : v))] })),
     };
@@ -875,6 +885,15 @@ function build(list, view, pair) {
     blocks.push({ kind: 'table', tbl, overview: true });
     tables.push(tbl);
     blocks.push(txt('太字: 左の版から変わった値', { fs: 11, fill: COL.sub }));
+    }
+    if (opt.work) {
+      const w0 = blocks.length;
+      blocks.push({ kind: 'gap', h: 10 });
+      blocks.push(txt(opt.work.head, { fs: 11, fill: COL.sub }));
+      section(blocks, tables, '作業の概要', ['項目', '値'], opt.work.rows, { noCount: true });
+      tables[tables.length - 1].maxw = { 1: 640 };
+      for (const b of blocks.slice(w0)) b.work = true; // 列で区切って印刷するとき、作業の概要は最初のページだけに置く
+    }
     return { blocks, tables };
   }
   if (view === 'trend') { const r = trendBlocks(list, blocks, tables); return { blocks, tables, message: r.message }; }
@@ -899,11 +918,11 @@ function build(list, view, pair) {
     }
     section(blocks, tables, '進捗が変わったタスク', ['タスク', '変更前', '変更後'], c.tasks.status.map((x) => [x.key, x.from, x.to]));
   } else if (view === 'sched') {
-    heading(blocks, '日程(各版のテキストから計算した終了日)');
+    heading(blocks, '日程(各版のテキストから計算した終了予定日)');
     const sg = (d) => (d > 0 ? `+${d}` : String(d));
     if (c.sched.worst.length) section(blocks, tables, '最も遅れたタスク', ['タスク', '差(日)'], c.sched.worst.map((s) => [s.key, sg(s.diff)]));
     else blocks.push(txt('遅れたタスクはありません', { fs: 13 }));
-    section(blocks, tables, 'タスクごとの終了日', ['タスク', '変更前', '変更後', '差(日)'], c.sched.rows.map((s) => [s.key, s.a, s.b, sg(s.diff)]));
+    section(blocks, tables, 'タスクごとの終了予定日', ['タスク', '変更前', '変更後', '差(日)'], c.sched.rows.map((s) => [s.key, s.a, s.b, sg(s.diff)]));
     estimateBlocks(pair, lab, blocks);
   } else if (view === 'fbs') {
     for (const [k, t] of [['FBS', c.fbs], ['PBS', c.pbs]]) {
@@ -920,8 +939,8 @@ function build(list, view, pair) {
       heading(blocks, 'MOP');
       section(blocks, tables, '追加した MOP', ['FBS の要素', 'MOP'], c.mop.added);
       section(blocks, tables, '削除した MOP', ['FBS の要素', 'MOP'], c.mop.removed);
-      section(blocks, tables, '確認した MOP', ['FBS の要素', 'MOP'], c.mop.checked);
-      section(blocks, tables, '確認を取り消した MOP', ['FBS の要素', 'MOP'], c.mop.unchecked);
+      section(blocks, tables, 'チェックした MOP', ['FBS の要素', 'MOP'], c.mop.checked);
+      section(blocks, tables, 'チェックを取り消した MOP', ['FBS の要素', 'MOP'], c.mop.unchecked);
     }
     if (!c.fbs.show && !c.pbs.show) blocks.push(txt('どちらの版にも FBS・PBS がありません', { fs: 13 }));
   } else if (view === 'gantt') {
@@ -936,12 +955,12 @@ function build(list, view, pair) {
   }
   return { blocks, tables };
 }
-function render(list, view, pair) {
-  const v = build(list, view, pair);
+function render(list, view, pair, opt) {
+  const v = build(list, view, pair, opt);
   if (v.message) v.blocks.push(txt(v.message, { fs: 13 }));
   // 図ごとの SVG(題を付けて 1 枚にする)。図のないビューでは空
   const figures = v.blocks.filter((b) => b.kind === 'fig' && b.fig).map((b) => ({ id: b.fig.id, title: b.fig.title, svg: compose([...b.fig.pre, b]) }));
-  // 表ごとの SVG(題は入れない。報告書では題を表の上に書くため。仕様書 6.2 節)。並びは tables と同じ
+  // 表ごとの SVG(題は入れない。報告書では題を表の上に書くため。仕様書 8.2 節)。並びは tables と同じ
   const tableSvgs = v.tables.map((t) => compose([v.blocks.find((b) => b.kind === 'table' && b.tbl === t)]));
   const raw = [];
   const svg = compose(v.blocks, raw);
@@ -949,13 +968,13 @@ function render(list, view, pair) {
   const anchors = raw.map((a) => (a.kind === 'table' ? { kind: 'table', index: v.tables.indexOf(a.ref), label: a.label, x: a.x, y: a.y } : { kind: 'fig', id: a.id, label: a.label, x: a.x, y: a.y })).filter((a) => a.kind === 'fig' ? figures.some((f) => f.id === a.id) : a.index >= 0);
   return { svg, tables: v.tables, tableSvgs, figures, anchors };
 }
-// 表をタブ区切りの文字にする(仕様書 6.2 節)。まとめたセルは各行に書く
+// 表をタブ区切りの文字にする(仕様書 8.2 節)。まとめたセルは各行に書く
 function tsv(tbl) {
   const c = (s) => cellT(s).replace(/[\t\r\n]+/g, ' ');
   return [tbl.header.map(c).join('\t'), ...tbl.rows.map((r) => r.cells.map(c).join('\t'))].join('\n') + '\n';
 }
 
-// ================= 印刷(仕様書 7.5 節) =================
+// ================= 印刷(仕様書 9.5 節) =================
 const PRINT_W = 1047, PRINT_H = 718, PRINT_MIN = 0.5;
 const svgSize = (svg) => { const m = /width="(\d+)" height="(\d+)"/.exec(svg); return [+m[1], +m[2]]; };
 const scaleOf = (svg) => { const [w, h] = svgSize(svg); return Math.min(1, PRINT_W / w, PRINT_H / h); };
@@ -987,8 +1006,8 @@ function splitRows(chart, pre, title) {
   }
   return pages;
 }
-function printPages(list, view, pair) {
-  const v = build(list, view, pair);
+function printPages(list, view, pair, opt) {
+  const v = build(list, view, pair, opt);
   if (v.message) v.blocks.push(txt(v.message, { fs: 13 }));
   const full = compose(v.blocks);
   // 推移: 図 1 つと、状態が初めて変わった版の表を、それぞれ別のページにする
@@ -1004,14 +1023,14 @@ function printPages(list, view, pair) {
     if (rest.length) pages.push(...paginate(rest));
     return pages;
   }
-  // 日程: G の題より前は表と同じく区切り、G は別のページにして行で区切る(7.5 節)
+  // 日程: G の題より前は表と同じく区切り、G は別のページにして行で区切る(9.5 節)
   if (view === 'sched' && !v.message) {
     const iG = v.blocks.findIndex((b) => b.kind === 'fig');
     const tIdx = v.blocks.lastIndexOf(v.blocks[iG].fig.pre[1]);
     return [...paginate(v.blocks.slice(0, tIdx).filter((b, k, arr) => !(b.kind === 'gap' && k === arr.length - 1))), ...splitRows(v.blocks[iG].chart, [v.blocks[iG].fig.pre[0], ...v.blocks.slice(tIdx, iG).filter((b) => b.kind !== 'gap')], v.blocks[iG].fig.title)]; // G のページにも「比較: … → …」を置く(5.5 節)
   }
   if (view === 'gantt' && !v.message) {
-    // 比較の要約は独立したページにし、図(F・J)は図と題と「比較: … → …」だけのページから始める(PDF から図だけを切り出しやすくするため。7.5 節)
+    // 比較の要約は独立したページにし、図(F・J)は図と題と「比較: … → …」だけのページから始める(PDF から図だけを切り出しやすくするため。9.5 節)
     const figs = v.blocks.filter((b) => b.kind === 'fig');
     const tF = v.blocks.indexOf(figs[0].fig.pre[1]);
     const pages = paginate(v.blocks.slice(0, tF).filter((b, k, arr) => !(b.kind === 'gap' && k === arr.length - 1)));
@@ -1019,12 +1038,12 @@ function printPages(list, view, pair) {
     return pages;
   }
   if (scaleOf(full) >= PRINT_MIN) return [full];
-  // 概要: 列(版)で区切る。各ページの左に行の見出しの列
+  // サマリー: 列(版)で区切る。各ページの左に行の見出しの列
   const ov = v.blocks.find((b) => b.overview);
   if (ov) {
     const t = ov.tbl, n = t.header.length - 1, pages = [];
     const sub = (a, b) => ({ ...t, header: [t.header[0], ...t.header.slice(1 + a, 1 + b)], rows: t.rows.map((r) => ({ cells: [r.cells[0], ...r.cells.slice(1 + a, 1 + b)] })) });
-    const draw = (a, b) => compose(v.blocks.map((x) => (x === ov ? { kind: 'table', tbl: sub(a, b) } : x)));
+    const draw = (a, b) => compose(v.blocks.filter((x) => a === 0 || !x.work).map((x) => (x === ov ? { kind: 'table', tbl: sub(a, b) } : x)));
     let a = 0;
     while (a < n) { let b = a + 1; while (b < n && scaleOf(draw(a, b + 1)) >= PRINT_MIN) b++; pages.push(draw(a, b)); a = b; }
     return pages;
@@ -1060,7 +1079,7 @@ function paginate(blocks) {
       while (k < rows.length && h + tableH(b.tbl, ws, rows.slice(0, k + 1)) + 6 <= limH) k++;
       if (k === 0) {
         // 空のページにも入らない行(1 行だけでページを超える行)は、区切らずに今のページに置く。
-        // 前の行の後なら、今のページは直前に作った「(続き)」の題のページになる。題だけのページは作らない(7.5 節)
+        // 前の行の後なら、今のページは直前に作った「(続き)」の題のページになる。題だけのページは作らない(9.5 節)
         const tooTall = tableH(b.tbl, ws, rows.slice(0, 1)) + 6 + blockH(txt('続き', { fs: 13 })) > limH;
         if (!tooTall && !fresh && cur.length) { fresh = cont(); continue; }
         k = 1;
@@ -1076,7 +1095,7 @@ function paginate(blocks) {
   return pages;
 }
 
-// ================= plans とプロジェクト計画の SVG の読み込み(仕様書 3.1 節・7.1 節) =================
+// ================= plans とプロジェクト計画の SVG の読み込み(仕様書 3.1 節・9.1 節) =================
 const FORMAT = 'projalysis-plans';
 const toPlans = (list) => `${JSON.stringify({ format: FORMAT, files: list.map((e) => ({ name: e.name, text: e.text })) }, null, 2)}\n`;
 // 戻り値 { ok, files: [{ name, text }] } か { ok: false, error }
@@ -1087,7 +1106,7 @@ function fromPlans(text) {
   return { ok: true, files: d.files.map((f) => ({ name: f.name, text: f.text })) };
 }
 // SVG から読む。読めるのはプロジェクト計画の版 0.30 までの SVG(.plan 1 つを埋め込んだもの)だけ。戻り値 { ok, files } か { ok: false, error }
-// プロジェクト分析の保存する SVG には何も埋め込まない(正本は plans だけにする。仕様書 7.3 節)
+// プロジェクト分析の保存する SVG には何も埋め込まない(正本は plans だけにする。仕様書 9.3 節)
 function extract(svgText, name) {
   const x = P.extractSource(svgText);
   if (x.ok) return { ok: true, files: [{ name: `${name.replace(/\.svg$/i, '')}.plan`, text: x.text }] };

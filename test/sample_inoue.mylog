@@ -1,0 +1,18 @@
+version: 2026-04-30
+by: 井上
+week: wed
+
+- 2026-04-23
+  - 予定登録CRUD用API URI hours: 3 status: done progress: 100
+- 2026-04-24
+  - 予定登録CRUD用APIの実装 hours: 4 status: doing progress: 10
+- 2026-04-27
+  - 予定登録CRUD用APIの実装 hours: 4 progress: 40
+- 2026-04-28
+  - 通知用APIの実装 hours: 0.5 answered: SMTP は大学のサーバーを使う
+  - 予定登録CRUD用APIの実装 hours: 3 progress: 60 review: 青木
+- 2026-04-29
+  - 日時の設定 test: ok mop: 開始と終了の日時を 1 分単位で登録できる note: 講義中にチームで確かめた
+  - 日時の設定 trl: 3 tpm: 登録から表示まで 0.8 s
+- 2026-04-30
+  - 予定登録CRUD用APIの実装 hours: 4 progress: 60

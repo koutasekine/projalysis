@@ -1,0 +1,35 @@
+by: 上田
+week: sun
+
+- 2026-11-02
+  - 貸出APIの実装 hours: 2 note: 先行して調査
+- 2026-11-04
+  - API設計 reviewed: ng note: 返却の API が足りない
+  - 貸出APIの実装 hours: 5 status: doing progress: 30
+- 2026-11-06
+  - 貸出APIの実装 hours: 6 progress: 60 ask: 井上
+  - 書誌APIの実装 ask: 井上 note: 書誌の項目を確認したい
+- 2026-11-09
+  - 貸出APIの実装 hours: 5 progress: 80
+- 2026-11-10
+  - 貸出APIの実装 hours: 4 status: done progress: 100 review: 青木
+- 2026-11-12
+  - 結合試験 hours: 3 status: doing progress: 10
+- 2026-11-13
+  - 結合試験 hours: 5 progress: 40 issue: テスト環境の DB が遅い
+- 2026-11-16
+  - 結合試験 hours: 3 status: doing
+- 2026-11-17
+  - 書誌の結合試験 hours: 4 progress: 70 solved: DB を SSD に移した
+- 2026-11-18
+  - 書誌の結合試験 hours: 3 status: done progress: 100 review: 青木
+- 2026-11-19
+  - 総合試験 hours: 1 note: 準備
+- 2026-11-22
+  - 総合試験 hours: 2 note: 週末に準備
+- 2026-11-24
+  - 総合試験 hours: 4 status: doing
+- 2026-11-26
+  - 貸出の記録 test: ok mop: 貸出と返却を 1 秒以内に記録できる
+- 2026-12-01
+  - 総合試験 status: blocked issue: 学外の利用者が来られない

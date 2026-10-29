@@ -1,0 +1,38 @@
+start: 2026-11-02
+end: 2026-11-27
+off: sun
+
+members:
+- 青木
+- 井上
+- 上田
+
+FBS: 図書アプリ
+- 蔵書管理
+  - 本の登録 mop*: ISBN から書名を 3 秒以内に表示する
+  - 本の検索 mop: 書名の一部で検索できる
+- 貸出
+  - 貸出の記録 mop: 貸出と返却を記録できる
+
+PBS: 図書アプリ
+- 画面
+  - 登録画面 realizes: 本の登録
+  - 検索画面 realizes: 本の検索
+  - 貸出画面 realizes: 貸出の記録
+- サーバー
+  - 書誌API realizes: 本の登録, 本の検索
+  - 貸出API realizes: 貸出の記録
+
+WBS: 図書アプリ
+- 設計
+  - 画面設計 for: 登録画面, 検索画面, 貸出画面 days: 2 by: 青木 review: 井上 status: done
+  - API設計 for: 書誌API, 貸出API days: 2 by: 井上 review: 上田 status: done
+  - 環境構築 days: 1 by: 井上 status: done
+- 実装
+  - 本の登録画面の実装 for: 登録画面 days: 3 by: 青木 after: 画面設計 status: blocked
+  - 検索画面の実装 for: 検索画面 days: 2 by: 青木 after: 本の登録画面の実装
+  - 貸出APIの実装 for: 貸出API, 貸出画面 days: 3 by: 上田 after: API設計 status: doing
+- サーバー実装
+  - 書誌APIの実装 for: 書誌API days: 3 by: 井上 after: API設計 status: doing
+- 試験
+  - 結合試験 for: 書誌API, 貸出API days: 3 by: 上田 review: 青木 after: 書誌APIの実装, 貸出APIの実装, 検索画面の実装

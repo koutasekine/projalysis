@@ -1,0 +1,25 @@
+version: 2026-04-29
+by: 青木
+week: wed
+
+- 2026-04-23
+  - カレンダデザイン hours: 4 status: done progress: 100
+- 2026-04-24
+  - 通知用API URI hours: 3 status: done progress: 100
+- 2026-04-25
+  - カレンダー画面の実装 hours: 5 status: done progress: 100
+- 2026-04-26
+  - 通知用APIの実装 hours: 4 status: doing progress: 20
+- 2026-04-27
+  - 通知用APIの実装 hours: 3 progress: 40 ask: 井上 note: メール送信の設定を相談した
+  - 登録確認メール test: ng mop: 予定の登録から 1 分以内にメールが届く note: 送信はできたが 3 分かかった
+  - 登録確認メール trl: 2
+- 2026-04-28
+  - 通知用APIの実装 hours: 4 progress: 60 issue: 登録確認メールが届くまで 3 分かかる
+  - 予定登録CRUD用APIの実装 hours: 1 reviewed: ng note: 終了が開始より前の予定を登録できてしまう
+  - 予定入力画面と予定登録APIの接続テスト status: blocked issue: 予定登録APIの仕様が決まらず、テストケースを作れない
+- 2026-04-29
+  - 通知用APIの実装 hours: 2 progress: 70 solved: SMTP の接続を使い回すようにして 10 秒で届くようになった review: 井上
+  - 登録確認メール test: ok mop: 予定の登録から 1 分以内にメールが届く
+  - カレンダー画面の実装 answered: 週の始まりは月曜に合わせた
+  - ユーザ登録APIとデータベースの接続テスト hours: 2 status: doing progress: 10 note: テストデータの準備を前倒しで始めた

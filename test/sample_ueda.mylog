@@ -1,0 +1,14 @@
+version: 2026-04-30
+by: 上田
+week: wed
+
+- 2026-04-23
+  - データベーススキーム設計 hours: 3 status: done progress: 100
+- 2026-04-24
+  - データベースの実装 hours: 5 status: doing progress: 50
+- 2026-04-25
+  - データベースの実装 hours: 4 status: done progress: 100 review: 井上
+- 2026-04-26
+  - ユーザ登録CRUD用API URI hours: 3 status: done progress: 100
+- 2026-04-27
+  - ユーザ登録CRUD用APIの実装 hours: 5 status: doing progress: 30

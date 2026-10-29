@@ -11,6 +11,8 @@ const ALLOWED = {
   WBS: ['for', 'days', 'by', 'review', 'after', 'status', 'note'],
 };
 const REF_ATTRS = ['realizes', 'for', 'by', 'review', 'after'];
+// 自由に書く文の属性。** と __ は、名前と名前を書く値では構文エラー、この値では書ける(仕様書 3.9 節)
+const FREE_ATTRS = ['note', 'mop', 'mop*'];
 const WD = { sun: 0, mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6 };
 const WD_JA = ['日', '月', '火', '水', '木', '金', '土'];
 // タスクの状態(status: の値)。書かなければ todo
@@ -106,7 +108,7 @@ function parse(text0) {
     if (sec[key]) { err(ln, ls, ls + klen, `「${key}:」が 2 回書かれています。各節は 1 回だけ書けます(${sec[key].line} 行で書いています)`); cur = { key: '_dup' }; return; }
     const rest = s.slice(klen);
     const restA = klen;
-    // version: は最後にファイルとして保存した日(仕様書 4.1 節)。図と日程には使わない
+    // version: は最後にファイルとして保存した日(仕様書 4.1 節)。図には使わない。日程では、完了以外のタスクを置く日の下限にだけ使う(6.3 節)
     if (key === 'version' || key === 'start' || key === 'end') {
       const v = trimRange(s, restA, s.length);
       const dn = parseDate(v.text);
@@ -122,7 +124,7 @@ function parse(text0) {
       return;
     }
     if (key === 'members') {
-      if (rest.trim()) err(ln, ls + restA, ls + s.length, 'members: の後ろには何も書きません。担当者は次の行から「- 名前」で書きます');
+      if (rest.trim()) err(ln, ls + restA, ls + s.length, 'members: の後ろには何も書きません。メンバーは次の行から「- 名前」で書きます');
       sec.members = { line: ln, start: ls, end: ls + s.length };
       cur = { key, lastInd: -1 };
       return;
@@ -148,10 +150,10 @@ function parse(text0) {
     if (!pa) return;
     if (!pa.name.text) { err(ln, ls + c0, ls + c0 + 1, '名前がありません。「- 」の後ろに名前を書いてください'); return; }
     if (cur.key === 'members') {
-      if (cur.lastInd >= 0 && ind > cur.lastInd) { err(ln, ls + c0, ls + s.length, '担当者の下に字下げした行は書けません(担当者は子を持ちません)'); return; }
+      if (cur.lastInd >= 0 && ind > cur.lastInd) { err(ln, ls + c0, ls + s.length, 'メンバーの下に字下げした行は書けません(メンバーは子を持ちません)'); return; }
       cur.lastInd = ind;
       const dup = members.find((m) => m.name === pa.name.text);
-      if (dup) { err(ln, ls + pa.name.a, ls + pa.name.b, `担当者「${pa.name.text}」が 2 回書かれています(${dup.line} 行)`); return; }
+      if (dup) { err(ln, ls + pa.name.a, ls + pa.name.b, `メンバー「${pa.name.text}」が 2 回書かれています(${dup.line} 行)`); return; }
       const m = { name: pa.name.text, line: ln, start: ls + c0, end: ls + s.length, nameStart: ls + pa.name.a, nameEnd: ls + pa.name.b, off: [], note: null,
         lineStart: ls, lineEnd: ls + lines[ln - 1].length, lead: s.slice(0, c0), attrList: pa.attrs, isMember: true };
       for (const at of pa.attrs) {
@@ -213,7 +215,7 @@ function parse(text0) {
     let ok = true;
     const E = (a, b, msg) => { err(ln, ls + a, ls + b, msg); ok = false; };
     const name = trimRange(body, from, hits.length ? hits[0].ks : body.length);
-    if (/\*\*|__/.test(name.text)) E(name.a, name.b, '太字(** や __)は使えません');
+    if (/\*\*|__/.test(name.text)) E(name.a, name.b, '太字(** や __)は書けません');
     if (name.text.includes(',')) E(name.a, name.b, `名前「${name.text}」にカンマ(,)は使えません(参照の区切りと区別できないため)`);
     if (name.text.includes('::')) E(name.a, name.b, `名前「${name.text}」に :: は使えません(修飾名の区切りと区別できないため)`);
     const attrs = [];
@@ -224,12 +226,12 @@ function parse(text0) {
       const kend = x.ks + x.key.length + 1;
       const allowed = key === 'members' ? ALLOWED.members : ALLOWED[key];
       if (!allowed || !allowed.includes(x.key)) {
-        E(x.ks, kend, `「${x.key}:」は ${key}: の${key === 'members' ? '担当者' : '要素'}には書けません(書けるもの: ${(allowed ?? []).map((k) => `${k}:`).join(' ')})`);
+        E(x.ks, kend, `「${x.key}:」は ${key}: の${key === 'members' ? 'メンバー' : '要素'}には書けません(書けるもの: ${(allowed ?? []).map((k) => `${k}:`).join(' ')})`);
         continue;
       }
       if (x.key !== 'mop' && x.key !== 'mop*' && seen.has(x.key)) { E(x.ks, kend, `「${x.key}:」が同じ行に 2 回あります`); continue; }
       seen.add(x.key);
-      if (/\*\*|__/.test(v.text)) { E(v.a, Math.max(v.b, v.a + 1), '太字(** や __)は使えません'); continue; }
+      if (!FREE_ATTRS.includes(x.key) && /\*\*|__/.test(v.text)) { E(v.a, Math.max(v.b, v.a + 1), '太字(** や __)は書けません'); continue; }
       if (!v.text) { E(x.ks, kend, `「${x.key}:」の後ろに値がありません`); continue; }
       const at = { key: x.key, text: v.text, start: ls + v.a, end: ls + v.b, kstart: ls + x.ks, line: ln };
       if (x.key === 'off') { at.off = parseOffList(body, v.a, v.b, ln, ls); if (!at.off) ok = false; }
@@ -242,7 +244,7 @@ function parse(text0) {
         at.milli = ip.length > 6 ? Infinity : +ip * 1000 + (d[2] ? +d[2].padEnd(3, '0') : 0);
         if (at.milli > 36500000) { E(v.a, v.b, `日数「${v.text}」が大きすぎます(36500 日まで)`); continue; }
       } else if (x.key === 'status') {
-        if (!Object.hasOwn(STATUS, v.text)) { E(v.a, v.b, `状態「${v.text}」が読めません。${Object.keys(STATUS).map((k) => `${k}(${STATUS[k]})`).join('・')}のどれかを書いてください`); continue; }
+        if (!Object.hasOwn(STATUS, v.text)) { E(v.a, v.b, `進捗「${v.text}」が読めません。${Object.keys(STATUS).map((k) => `${k}(${STATUS[k]})`).join('・')}のどれかを書いてください`); continue; }
       } else if (REF_ATTRS.includes(x.key)) {
         at.refs = [];
         let p = v.a;
@@ -298,7 +300,8 @@ function parse(text0) {
 }
 
 // ================= 意味の解析・検査・計算 =================
-function analyze(text) {
+// opt.version: 日程に使う版の日付(YYYY-MM-DD)を、テキストの version: の代わりに使う(画面で、保存していない変更がある間に、保存したときの日付で描くため。9 章)
+function analyze(text, opt = {}) {
   const p = parse(text);
   const diags = p.diags;
   const res = { text: p.text, parse: p, diags, ok: false };
@@ -443,7 +446,7 @@ function analyze(text) {
     leafCheck(bySec.FBS, (n) => n.mops.length > 0, 'C3', (n) => `FBS の「${n.name}」に MOP(mop: か mop*:)がありません`);
   }
   if (sec.PBS) leafCheck(bySec.PBS, (n) => tasksFor.has(n), 'C4', (n) => `PBS の「${n.name}」のためのタスクがありません(WBS のタスクに for: で書きます)`);
-  for (const t of tasks) if (!t.by.length) C('C5', t, `タスク「${t.name}」に担当者(by:)がいません`);
+  for (const t of tasks) if (!t.by.length) C('C5', t, `タスク「${t.name}」に作成者(by:)がいません`);
   if (!tasks.length) warn({ line: sec.WBS.line, start: sec.WBS.start, end: sec.WBS.end }, 'WBS にタスクがありません(WBS: の下に「- 名前」で書きます)', '書き方');
 
   // ---- 管理番号(仕様書 7.1 節)
@@ -488,6 +491,14 @@ function analyze(text) {
     }
     return x;
   };
+  // 完了以外のタスクは、版の日付(version:)より前の日には置かない(仕様書 6.3 節)。計画を直した日に足したタスク・まだ終わっていないタスクが、
+  // 過去の空いた日に置かれて、すぐ遅延にならないように。完了のタスクには下限を付けない。
+  // opt.version(画面で、保存していない間の今日)は実行前のタスクの下限だけを替える。実行中・問題発生のタスクは、テキストの version: の日付のまま
+  // (保存していない間も、実行中・問題発生のタスクの遅れが見えるように)
+  const tDate = sec.version ? sec.version.date : null;
+  const vDate = opt.version !== undefined && opt.version !== null ? parseDate(opt.version) : tDate;
+  const floorOf = (d) => (d !== null && d > start ? (d - start) * 1000 : 0);
+  const vFloor = floorOf(vDate), tFloor = floorOf(tDate);
   const busy = new Map(members.map((m) => [m, []]));
   const placed = new Set();
   const order = [];
@@ -495,7 +506,7 @@ function analyze(text) {
     const elig = tasks.filter((t) => !placed.has(t) && t.pred.every((q) => placed.has(q)));
     elig.sort((a, b) => a.LS - b.LS || a.order - b.order);
     const t = elig[0];
-    const c0 = Math.max(0, ...t.pred.map((q) => q.f));
+    const c0 = Math.max(t.status === 'todo' ? vFloor : t.status !== 'done' ? tFloor : 0, ...t.pred.map((q) => q.f));
     // 日数 0 のタスクは、休みに当たっても次の作業日へ送らず、先行が終わった時刻に置く(仕様書 6.3 節)
     if (t.days === 0) { t.s = c0; t.f = c0; placed.add(t); order.push(t); continue; }
     const cands = [c0];
@@ -526,7 +537,7 @@ function analyze(text) {
   const spanDays = tasks.length ? Math.max(...tasks.map((t) => t.d1)) + 1 : 0;
   const finishDate = tasks.length ? start + spanDays - 1 : null;
   if (sec.end && finishDate !== null && finishDate > sec.end.date) {
-    warn({ line: sec.end.line, start: sec.end.start, end: sec.end.end }, `日程の終わり(${fmtDate(finishDate)})が end:(${fmtDate(sec.end.date)})を ${finishDate - sec.end.date} 日超えています`, '日程');
+    warn({ line: sec.end.line, start: sec.end.start, end: sec.end.end }, `終了日(${fmtDate(finishDate)})が期限(end: ${fmtDate(sec.end.date)})を ${finishDate - sec.end.date} 日超えています`, '日程');
   }
 
   Object.assign(res, {
@@ -543,12 +554,18 @@ const COL = { accent: '#8b1a2b', line: '#333', warnFill: '#fff3c4', warnLine: '#
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const charW = (ch, fs) => (/[\u0000-\u024f\uff61-\uff9f]/.test(ch) ? 0.6 : 1) * fs;
 const textW = (s, fs) => [...s].reduce((a, ch) => a + charW(ch, fs), 0);
+const NOHEAD = '、。，．,.)）」』】〕〉》・：；:;!！?？ー…'; // 行頭に置かない文字(行頭禁則。前の行の最後の文字ごと次の行へ送る)
 function wrap(s, maxW, fs) {
   const out = [];
   let cur = '', w = 0;
   for (const ch of s) {
     const cw = charW(ch, fs);
-    if (w + cw > maxW && cur) { out.push(cur); cur = ''; w = 0; }
+    if (w + cw > maxW && cur) {
+      // 行頭禁則: 送る文字が行頭に置けないときは、前の行の最後の文字も次の行へ送る
+      // 送る文字の前も行頭に置けない文字なら、さらに前の文字まで送る(行は空にしない)
+      if (NOHEAD.includes(ch) && [...cur].length > 1) { const k = [...cur]; const mv = []; do { mv.unshift(k.pop()); } while (k.length > 1 && NOHEAD.includes(mv[0])); out.push(k.join('')); cur = mv.join(''); w = textW(cur, fs); }
+      else { out.push(cur); cur = ''; w = 0; }
+    }
     cur += ch; w += cw;
   }
   if (cur) out.push(cur);
@@ -582,8 +599,8 @@ function renderTree(r, key, opt = {}) {
     if (key === 'FBS') n.mops.forEach((m, i) => sub.push(...wrap(`${n.mopChecked[i] ? '✓ ' : ''}MOP: ${m}`, MAXW - 2 * PADX, SFS)));
     if (key === 'WBS' && n.parent && !n.children.length) {
       const bits = [`${fmtDays(n.days)} 日`];
-      if (n.by.length) bits.push(`作成 ${who(r, n.by)}`);
-      if (n.review.length) bits.push(`確認 ${who(r, n.review)}`);
+      if (n.by.length) bits.push(`作成者 ${who(r, n.by)}`);
+      if (n.review.length) bits.push(`確認者 ${who(r, n.review)}`);
       sub.push(...wrap(bits.join(' / '), MAXW - 2 * PADX, SFS));
     }
     const w = Math.max(70, Math.min(MAXW, Math.max(...lines.map((l) => textW(l, FS)), ...sub.map((l) => textW(l, SFS))) + 2 * PADX));
@@ -825,7 +842,7 @@ function renderAOA(r, opt = {}) {
   if (opt.part === 'diagram') return wrapSvg(Math.max(W, textW(head0[0], 13) + 2 * M), TOP + H + M, T_(M, 26, head0[0], { fs: 13, weight: '600' }) + T_(M, 46, head0[1], { fs: 11, fill: COL.sub }) + out.join(''));
   // 下にタスクの表(管理番号・名前・日数・最早開始・最遅開始・余裕)
   const FS = 12, RH = 20;
-  const cols = [['管理番号', 70], ['タスク', 260], ['日数', 50], ['最早開始', 70], ['最遅開始', 70], ['余裕', 50]];
+  const cols = [['WBS 番号', 70], ['タスク', 260], ['日数', 50], ['最早開始', 70], ['最遅開始', 70], ['余裕', 50]];
   const tw = cols.reduce((a, c) => a + c[1], 0);
   let ty = opt.part === 'table' ? TOP - 30 : TOP + H + 30;
   const tbl = [];
@@ -1034,7 +1051,7 @@ function renderRoles(r, opt = {}) {
   const L = wbsTable(r);
   const pw = (list) => Math.min(200, Math.max(70, ...r.tasks.map((t) => textW(list(t), L.FS) + 12)));
   const byW = pw((t) => who(r, t.by)), rvW = pw((t) => who(r, t.review));
-  const extra = [['作成', byW], ['確認', rvW], ['日数', 50]];
+  const extra = [['作成者', byW], ['確認者', rvW], ['日数', 50]];
   const hc = headerCells(L, M, TOP, L.RH, extra);
   const table = opt.table !== false;
   const nRows = opt.rows ? opt.rows[1] - opt.rows[0] : r.tasks.length;
@@ -1043,7 +1060,7 @@ function renderRoles(r, opt = {}) {
   if (opt.collect && table) {
     const anc = (t) => { const a = []; for (let x = t.parent; x && x.parent; x = x.parent) a.unshift(x); return a; };
     opt.collect.anchors.push({ kind: 'table', index: opt.collect.tables.length, label: `役割分担: ${r.sec.WBS.root.name}`, y: 28, fs: 13 });
-    opt.collect.tables.push({ name: '役割分担', header: [...Array.from({ length: L.levels }, (_, k) => `第 ${k + 1} 層`), 'タスク', '作成', '確認', '日数'],
+    opt.collect.tables.push({ name: '役割分担', header: [...Array.from({ length: L.levels }, (_, k) => `第 ${k + 1} 層`), 'タスク', '作成者', '確認者', '日数'],
       rows: r.tasks.map((t) => { const a = anc(t); return [...Array.from({ length: L.levels }, (_, k) => (a[k] ? `${a[k].num} ${a[k].name}` : '')), `${t.num} ${t.name}`, who(r, t.by) || '(なし)', who(r, t.review), fmtDays(t.days)]; }),
       frag: hc.svg + body, box: [M, TOP, tableW, L.RH * (nRows + 1)] });
   }
@@ -1080,7 +1097,7 @@ function renderRoles(r, opt = {}) {
 // 状態の塗り(仕様書 7.5 節)。実行前は白地に黒枠、完了は目立たない灰、問題発生だけを強調の色にする
 const STATUS_FILL = { todo: '#fff', doing: COL.blue, done: '#bdbdb8', blocked: COL.accent };
 const statusAttr = (st) => `fill="${STATUS_FILL[st]}"${st === 'todo' ? ` stroke="${COL.line}" stroke-width="1"` : ''}`;
-// 遅れ: 今日より前の日に終わる予定で、完了になっていないタスク(today は 1970-01-01 からの日数)
+// 遅延: 今日より前の日に終わる予定で、完了になっていないタスク(today は 1970-01-01 からの日数)
 const isLate = (r, t, today) => today !== null && t.status !== 'done' && today > r.sched.start + t.d1;
 // ---- ガントチャートと担当者別ガントチャートで共通の部品
 // 日付の目盛り(月・日・曜日の 3 段)と、本体の日の列(全体の休みは灰色)
@@ -1125,14 +1142,14 @@ function markLines(r, gx, TOP, HR, nDays, DW, bottom, endD, today) {
     const x = gx + endD * DW;
     out.push(`<path d="M${x} ${TOP + HR}V${bottom + 6}" stroke="${COL.accent}" stroke-width="2" stroke-dasharray="6 3"/>` + T_(x + 3, bottom + 18, 'end', { fs: 11, fill: COL.accent }));
   }
-  // 今日の線(今日の列の始まり。これより左で終わる棒が、完了でなければ遅れ)
+  // 今日の線(今日の列の始まり。これより左で終わる棒が、完了でなければ遅延)
   if (today !== null && today >= s0 && today < s0 + nDays) {
     const x = gx + (today - s0) * DW;
     out.push(`<path d="M${x} ${TOP + HR}V${bottom + 6}" stroke="${COL.line}" stroke-width="2"/>` + T_(x - 3, bottom + 18, '今日', { fs: 11, anchor: 'end', fill: COL.line, weight: '600' }));
   }
   return out;
 }
-// 凡例: 状態の塗り、遅れ、休み
+// 凡例: 進捗の塗り、遅延、休み
 // twoLines: 説明の文を 2 行目に回す(担当者別ガントチャート。図の幅が説明の文で広がりすぎないように)
 function legendSvg(today, M, extra = '', lateMark = false, twoLines = false) {
   const lg = [];
@@ -1142,7 +1159,7 @@ function legendSvg(today, M, extra = '', lateMark = false, twoLines = false) {
     lx += 22 + textW(STATUS[k], 11) + 14;
   }
   if (today !== null && lateMark) { lg.push(`<circle cx="${lx + 5}" cy="41" r="4" fill="${COL.accent}"/>`); lx += 12; }
-  if (today !== null) { lg.push(T_(lx, 45, '遅れ', { fs: 11, fill: COL.accent, weight: '600' })); lx += textW('遅れ', 11); }
+  if (today !== null) { lg.push(T_(lx, 45, '遅延', { fs: 11, fill: COL.accent, weight: '600' })); lx += textW('遅延', 11); }
   const lateDef = today !== null ? `: 今日(${fmtDate(today)})より前に終わる予定で、完了になっていないタスク。` : '';
   const rest = `${twoLines ? '' : lateDef}灰色の列は全体の休み、斜線は担当者の休み。棒は休みの日を除いて描く${extra}`;
   if (!twoLines) { lg.push(T_(lx, 45, rest, { fs: 11, fill: COL.sub })); return { svg: lg.join(''), w: lx + textW(rest, 11) }; }
@@ -1151,9 +1168,9 @@ function legendSvg(today, M, extra = '', lateMark = false, twoLines = false) {
   lines.forEach((l, i) => lg.push(T_(M, 61 + i * 15, l, { fs: 11, fill: COL.sub })));
   return { svg: lg.join(''), w: Math.max(lx + textW(lateDef, 11), ...lines.map((l) => M + textW(l, 11))), h: 61 + (lines.length - 1) * 15 };
 }
-const lateText = (t, gx, DW, y, h) => T_(gx + t.f / 1000 * DW + (t.f === t.s ? h / 2 : 0) + 5, y + h / 2 + 4, '遅れ', { fs: 11, fill: COL.accent, weight: '600' });
-const barTitle = (r, t, late) => `${t.num} ${t.name}: ${fmtDate(r.sched.start + t.d0)} 〜 ${fmtDate(r.sched.start + t.d1)}(${fmtDays(t.days)} 日)、${STATUS[t.status]}${late ? '、遅れ' : ''}`;
-// 図の日数(日程の終わりと end: の遅い方まで)
+const lateText = (t, gx, DW, y, h) => T_(gx + t.f / 1000 * DW + (t.f === t.s ? h / 2 : 0) + 5, y + h / 2 + 4, '遅延', { fs: 11, fill: COL.accent, weight: '600' });
+const barTitle = (r, t, late) => `${t.num} ${t.name}: ${fmtDate(r.sched.start + t.d0)} 〜 ${fmtDate(r.sched.start + t.d1)}(${fmtDays(t.days)} 日)、${STATUS[t.status]}${late ? '、遅延' : ''}`;
+// 図の日数(終了日と end: の遅い方まで)
 const figDays = (r) => { const endD = r.sec.end && r.sec.end.date !== null ? r.sec.end.date - r.sched.start + 1 : 0; return { endD, nDays: Math.max(r.sched.spanDays, endD, 1) }; };
 
 // opts.rows: 描くタスクの範囲 [始め, 終わり)(印刷で行を区切るとき)
@@ -1167,7 +1184,7 @@ function renderGantt(r, opts = {}) {
   const { endD, nDays } = figDays(r);
   const today = opts.today ? parseDate(opts.today) : null;
   const stW = 64;
-  const left = headerCells(L, M, TOP, HR * 3, [['担当者', byW], ['状態', stW]]);
+  const left = headerCells(L, M, TOP, HR * 3, [['作成者', byW], ['進捗', stW]]);
   const gx = left.x;
   const T = opts.rows ? r.tasks.slice(opts.rows[0], opts.rows[1]) : r.tasks;
   const bodyY = TOP + HR * 3, n = T.length;
@@ -1235,7 +1252,7 @@ function renderPeople(r, opts = {}) {
   // 横棒の長さは、担当者のうち作成の日数がいちばん多い人を最長にする(担当なしの行は含めない。はみ出すときは最長で止める)
   const maxDays = Math.max(1, ...rows.map((x) => x.days));
   const mark = (k) => (sort?.key === k ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
-  const cols = [['担当者', nameW, null], [`作成の日数${mark('days')}`, daysW, 'days'], [`稼働率${mark('rate')}`, rateW, 'rate'], ['確認', revW, null]];
+  const cols = [['担当者', nameW, null], [`作成の日数${mark('days')}`, daysW, 'days'], [`稼働率${mark('rate')}`, rateW, 'rate'], ['確認者', revW, null]];
   const out = [];
   let x = M;
   for (const [t, w, k] of cols) {
@@ -1270,7 +1287,7 @@ function renderPeople(r, opts = {}) {
         const label = textW(`${t.num} ${t.name}`, 11) + 8 <= w0 ? `${t.num} ${t.name}` : textW(t.num, 11) + 8 <= w0 ? t.num : '';
         if (label) s += T_(x0 + 4, by + h / 2 + 4, label, { fs: 11, fill: t.status === 'doing' || t.status === 'blocked' ? '#fff' : COL.text });
       }
-      // 遅れ: 棒の右上にえんじの丸を付ける(次のタスクの棒と重ならないよう、文字ではなく印にする)
+      // 遅延: 棒の右上にえんじの丸を付ける(次のタスクの棒と重ならないよう、文字ではなく印にする)
       const late = isLate(r, t, today);
       if (late) s += `<circle cx="${gx + t.f / 1000 * DW + (t.f === t.s ? h / 2 : 0) - 1}" cy="${by + 1}" r="4" fill="${COL.accent}" stroke="#fff" stroke-width="1"/>`;
       out.push(`<g ${sel(t)}><title>${esc(barTitle(r, t, late))}</title>${s}</g>`);
@@ -1283,14 +1300,14 @@ function renderPeople(r, opts = {}) {
   return wrapSvg(Math.max(W, textW(title, 13) + 2 * M, lg.w + M), bodyY + n * RH + 30 + M, HATCH + T_(M, 24, title, { fs: 13, weight: '600' }) + lg.svg + out.join(''));
 }
 
-// ---- サマリー(仕様書 7.8 節)。計画の概要・タスクの進み具合・予定との比べ・遅れと問題発生・担当者ごと・MOP・警告を 1 枚にまとめる
+// ---- サマリー(仕様書 7.8 節)。計画の概要・タスクの進み具合・予定との比べ・遅延と問題発生・担当者ごと・MOP・警告を 1 枚にまとめる
 // 今日までに終わる予定だったタスクの長さ(1/1000 日)。日程どおりに進んだとき、今日の始まりまでに済んでいるはずの長さ
 function plannedByToday(r, today) {
   if (today === null) return null;
   const T = (today - r.sched.start) * 1000;
   return r.tasks.reduce((a, t) => a + Math.min(t.days, workUntil(r, t, T)), 0);
 }
-const SUM_CAT = [['検査 C1', 'C1: FBS に対応する PBS'], ['検査 C2', 'C2: PBS に対応する FBS'], ['検査 C3', 'C3: FBS の MOP'], ['検査 C4', 'C4: PBS のためのタスク'], ['検査 C5', 'C5: タスクの担当者'], ['書き方', '書き方'], ['日程', '日程']];
+const SUM_CAT = [['検査 C1', 'C1: FBS に対応する PBS'], ['検査 C2', 'C2: PBS に対応する FBS'], ['検査 C3', 'C3: FBS の MOP'], ['検査 C4', 'C4: PBS のためのタスク'], ['検査 C5', 'C5: タスクの作成者'], ['書き方', '書き方'], ['日程', '日程']];
 function renderSummary(r, opts = {}) {
   const M = 20, FS = 12, RH = 22, W0 = 760;
   const today = opts.today ? parseDate(opts.today) : null;
@@ -1339,7 +1356,7 @@ function renderSummary(r, opts = {}) {
   h2('計画の概要');
   line(`期間: ${fmtDate(s0)} 〜 ${r.sec.end && r.sec.end.date !== null ? fmtDate(r.sec.end.date) : '(end: なし)'}${today !== null ? `   今日: ${fmtDate(today)}` : ''}`);
   line(summaryText(r)[0]);
-  line(`タスク ${r.tasks.length} 件、担当者 ${r.members.length} 人`);
+  line(`タスク ${r.tasks.length} 件、メンバー ${r.members.length} 人`);
 
   // 2. タスクの進み具合
   h2('タスクの進み具合');
@@ -1351,7 +1368,7 @@ function renderSummary(r, opts = {}) {
   let lx = M + 436;
   out.push(T_(lx, y - 3, `完了 ${pct(days.done, totalDays)}(日数)、${pct(cnt.done.length, r.tasks.length)}(件数)`, { fs: FS, weight: '600' }));
   y += 6;
-  table([['状態', 120], ['件数', 80, true], ['日数', 100, true]], keys.map((k) => ({ cells: [STATUS[k], `${cnt[k].length} 件`, `${fmtDays(days[k])} 日`] })).concat([{ cells: [{ t: '計', weight: '600' }, { t: `${r.tasks.length} 件`, weight: '600' }, { t: `${fmtDays(totalDays)} 日`, weight: '600' }] }]));
+  table([['進捗', 120], ['件数', 80, true], ['日数', 100, true]], keys.map((k) => ({ cells: [STATUS[k], `${cnt[k].length} 件`, `${fmtDays(days[k])} 日`] })).concat([{ cells: [{ t: '計', weight: '600' }, { t: `${r.tasks.length} 件`, weight: '600' }, { t: `${fmtDays(totalDays)} 日`, weight: '600' }] }]));
 
   // 3. 予定との比べ
   h2('予定との比べ');
@@ -1368,15 +1385,15 @@ function renderSummary(r, opts = {}) {
     out.push(T_(M + 436, y - 3 - 14, '灰色: 完了した日数', { fs: 11, fill: COL.sub }));
   }
 
-  // 4. 遅れと問題発生
-  h2('遅れと問題発生');
+  // 4. 遅延と問題発生
+  h2('遅延と問題発生');
   const lates = r.tasks.filter((t) => isLate(r, t, today) || t.status === 'blocked');
-  if (!lates.length) line(today === null ? '問題発生のタスクはありません(今日の日付がないため、遅れは調べていません)。' : '遅れと問題発生のタスクはありません。', { fill: COL.sub });
+  if (!lates.length) line(today === null ? '問題発生のタスクはありません(今日の日付がないため、遅延は調べていません)。' : '遅延と問題発生のタスクはありません。', { fill: COL.sub });
   else {
     y += 8;
-    table([['管理番号', 80], ['タスク', 260], ['担当', 120], ['予定の終わり', 100], ['状態', 80], ['遅れ', 50]], lates.map((t) => {
+    table([['WBS 番号', 80], ['タスク', 260], ['作成者', 120], ['終了予定日', 100], ['進捗', 80], ['遅延', 50]], lates.map((t) => {
       const late = isLate(r, t, today);
-      return { id: t.id, start: t.start, end: t.end, title: r.qname(t), cells: [t.num, t.name, who(r, t.by) || '(なし)', fmtDate(s0 + t.d1), { t: STATUS[t.status], fill: t.status === 'blocked' ? COL.accent : undefined }, { t: late ? '遅れ' : '', fill: COL.accent, weight: '600' }] };
+      return { id: t.id, start: t.start, end: t.end, title: r.qname(t), cells: [t.num, t.name, who(r, t.by) || '(なし)', fmtDate(s0 + t.d1), { t: STATUS[t.status], fill: t.status === 'blocked' ? COL.accent : undefined }, { t: late ? '遅延' : '', fill: COL.accent, weight: '600' }] };
     }));
   }
 
@@ -1391,7 +1408,7 @@ function renderSummary(r, opts = {}) {
   const prows = r.members.map((m, i) => prow(m.name, r.tasks.filter((t) => t.by.includes(m)), m, i));
   const none = r.tasks.filter((t) => !t.by.length);
   if (none.length) prows.push(prow('(担当なし)', none, null));
-  table([['担当者', 120], ['実行前', 64, true], ['実行中', 64, true], ['完了', 64, true], ['問題発生', 72, true], ['遅れ', 56, true], ['作成の日数', 90, true]], prows);
+  table([['担当者', 120], ['実行前', 64, true], ['実行中', 64, true], ['完了', 64, true], ['問題発生', 72, true], ['遅延', 56, true], ['作成の日数', 90, true]], prows);
 
   // 6. テスト項目(MOP)
   if (r.sec.FBS) {
@@ -1548,25 +1565,25 @@ function printPages(r, view, opts = {}) {
 
 // 選んだ要素の情報(画面の下の欄)
 function describe(r, id, opts = {}) {
-  if (/^m\d+$/.test(id)) { const m = r.members[+id.slice(1)]; return m ? { kind: '担当者', name: m.name, items: [m.off.length ? ['休み', offText(m.off)] : null, m.note ? ['note', m.note] : null].filter(Boolean) } : null; }
+  if (/^m\d+$/.test(id)) { const m = r.members[+id.slice(1)]; return m ? { kind: 'メンバー', name: m.name, items: [m.off.length ? ['休み', offText(m.off)] : null, m.note ? ['note', m.note] : null].filter(Boolean) } : null; }
   const n = r.nodes.find((x) => x.id === id);
   if (!n) return null;
   const items = [];
   const kind = n.sec === 'WBS' ? (!n.parent ? 'WBS の根' : n.children.length ? 'WBS の要素' : 'タスク') : `${n.sec} の${n.parent ? '要素' : '根'}`;
-  if (n.num) items.push(['管理番号', n.num]);
+  if (n.num) items.push([`${n.sec} 番号`, n.num]);
   if (n.sec === 'FBS' && n.mops.length) items.push(['MOP', n.mops.map((m, i) => `${n.mopChecked[i] ? '✓ ' : ''}${m}`).join(' / ')]);
   if (n.sec === 'PBS' && n.R.realizes?.length) items.push(['実現する機能', n.R.realizes.map((x) => x.name).join('、')]);
   if (n.sec === 'WBS') {
     if (n.for.length) items.push(['対象(for)', n.for.map((x) => x.name).join('、')]);
-    if (n.by.length) items.push(['作成', n.by.map((x) => x.name).join('、')]);
-    if (n.review.length) items.push(['確認', n.review.map((x) => x.name).join('、')]);
+    if (n.by.length) items.push(['作成者', n.by.map((x) => x.name).join('、')]);
+    if (n.review.length) items.push(['確認者', n.review.map((x) => x.name).join('、')]);
     if (n.parent && !n.children.length) {
       items.push(['日数', `${fmtDays(n.days)} 日`]);
       if (n.pred.length) items.push(['先行', n.pred.map((x) => x.name).join('、')]);
       items.push(['日程', `${fmtDate(r.sched.start + n.d0)} 〜 ${fmtDate(r.sched.start + n.d1)}`]);
       items.push(['余裕', `${fmtDays(n.TF)} 日${n.crit ? '(クリティカルパス)' : ''}`]);
       const today = opts.today ? parseDate(opts.today) : null;
-      items.push(['状態', `${STATUS[n.status]}(${n.status})${isLate(r, n, today) ? '、遅れ' : ''}`]);
+      items.push(['進捗', `${STATUS[n.status]}(${n.status})${isLate(r, n, today) ? '、遅延' : ''}`]);
     }
   }
   if (n.note) items.push(['note', n.note]);
@@ -1578,8 +1595,8 @@ function offText(list) { return list.map((o) => (o.type === 'wd' ? Object.keys(W
 function toPrompt(diags, text) {
   const out = [];
   out.push('次の「プロジェクト計画」(https://plan.sapp.jp)のテキスト記法について、下の診断の内容を直したテキストを書いてください。');
-  out.push('返すテキストはコードブロック(```)で囲まず、テキストだけを書いてください。見出し(#)・番号付きのリスト・太字(**)・説明の文の行は書けません(構文エラーになります)。');
-  out.push('書き方の要点: 1 行目の「version: 日付」は保存した日で、アプリが書くので、そのまま残す(ほかの場所には書かない)。節は「start:」「end:」「off:」「members:」「FBS: 根の名前」「PBS: 根の名前」「WBS: 根の名前」。要素は「- 名前」の字下げで階層を作り、属性は名前の後ろに「予約語: 値」を並べる(FBS は mop: mop*:(チェック済みの MOP) note:、PBS は realizes: note:、WBS は for: days: by: review: after: status: note:)。複数の値はカンマ区切り。参照は名前で書き、同じ名前が複数あれば「親::子」と書く。メモは note: に書く。担当者の行には off:(その人の休み)と note: を書ける。// から行末までは注(行頭か空白の後の // だけ)。「* 」「+ 」で始まるリスト、** と __ は、太字のつもりでなくても書けない(__init__.py のような名前も不可)。status: はタスク(末端の要素)の状態で、todo(実行前)・doing(実行中)・done(完了)・blocked(問題発生)のどれか。書かなければ todo。');
+  out.push('返すテキストはコードブロック(```)で囲まず、テキストだけを書いてください。見出し(#)・番号付きのリスト・説明の文の行は書けません(構文エラーになります)。');
+  out.push('書き方の要点: 1 行目の「version: 日付」は保存した日で、アプリが書くので、そのまま残す(ほかの場所には書かない)。節は「start:」「end:」「off:」「members:」「FBS: 根の名前」「PBS: 根の名前」「WBS: 根の名前」。要素は「- 名前」の字下げで階層を作り、属性は名前の後ろに「予約語: 値」を並べる(FBS は mop: mop*:(チェック済みの MOP) note:、PBS は realizes: note:、WBS は for: days: by: review: after: status: note:)。複数の値はカンマ区切り。参照は名前で書き、同じ名前が複数あれば「親::子」と書く。メモは note: に書く。メンバーの行には off:(その人の休み)と note: を書ける。// から行末までは注(行頭か空白の後の // だけ)。「* 」「+ 」で始まるリストは書けない。** と __ は、太字のつもりでなくても、名前と参照の値には書けない(__init__.py のような名前も不可)。note:・mop:・mop*: の文には書ける。status: はタスク(末端の要素)の状態で、todo(実行前)・doing(実行中)・done(完了)・blocked(問題発生)のどれか。書かなければ todo。');
   out.push('');
   const er = diags.filter((d) => d.level === 'error'), wr = diags.filter((d) => d.level === 'warn');
   if (er.length) { out.push('## エラー'); for (const d of er) out.push(`- ${d.line} 行: ${d.message}`); out.push(''); }
@@ -1656,10 +1673,10 @@ const Edit = (() => {
   const secList = (nodes, sec) => nodes.filter((x) => x.sec === sec);
 
   // 名前や値に書けない文字列(書くと、同じ行の後ろの属性が注になったり、別の属性が始まったりする)
-  function badText(v, what) {
+  function badText(v, what, free = false) {
     if (/(^|[ \t])\/\//.test(v)) return `${what}に「空白 + //」は書けません(そこから後ろが注になります)`;
     if (RE_KW.test(v)) return `${what}に「空白 + 予約語 + 半角コロン」は書けません(そこから別の属性と読まれます。全角のコロンを使ってください)`;
-    if (/\*\*|__/.test(v)) return `${what}に ** と __ は書けません`;
+    if (!free && /\*\*|__/.test(v)) return `${what}に ** と __ は書けません`;
     return null;
   }
   const badName = (name) => {
@@ -1792,13 +1809,13 @@ const Edit = (() => {
     if (!n) return fail('要素が見つかりません');
     if (key === 'mop') {
       const list = (Array.isArray(value) ? value : [value]).map((v) => String(v).trim()).filter(Boolean);
-      for (const v of list) { const b = badText(v, '値'); if (b) return fail(b); }
+      for (const v of list) { const b = badText(v, '値', true); if (b) return fail(b); }
       return setMops(r, n, list);
     }
     const text = r.text;
     const edits = [];
     const list = key === 'mop' ? (Array.isArray(value) ? value : [value]).map((v) => String(v).trim()).filter(Boolean) : [String(value).trim()].filter(Boolean);
-    for (const v of list) { const b = badText(v, '値'); if (b) return fail(b); }
+    for (const v of list) { const b = badText(v, '値', FREE_ATTRS.includes(key)); if (b) return fail(b); }
     if (key !== 'mop' && key !== 'note' && list[0] && /(^|[ \t])\/\//.test(list[0])) return fail('値に「空白 + //」は書けません');
     const olds = n.attrList.filter((a) => a.key === key);
     // 元の位置のまま置き換え、余れば消し、足りなければ行の終わりに足す
@@ -1824,7 +1841,7 @@ const Edit = (() => {
     if (bad) return fail(bad);
     if (newName === n.name) return { text: r.text, select: keyOf(n) };
     const sibs = n.isMember ? r.members : n.parent ? n.parent.children : [];
-    if (sibs.some((x) => x !== n && x.name === newName)) return fail(n.isMember ? `担当者に「${newName}」がすでにいます` : `同じ親の下に「${newName}」がすでにあります`);
+    if (sibs.some((x) => x !== n && x.name === newName)) return fail(n.isMember ? `メンバーに「${newName}」がすでにいます` : `同じ親の下に「${newName}」がすでにあります`);
     const edits = [{ start: n.nameStart, end: n.nameEnd, text: newName }];
     const refs = [];
     for (const m of [...r.nodes, ...r.members]) for (const at of m.attrList) for (const ref of at.refs ?? []) if (ref.node) refs.push(ref);
@@ -1882,12 +1899,12 @@ const Edit = (() => {
     if (!n) return fail('要素が見つかりません');
     if (!n.isMember && !n.parent) return fail('根には兄弟を足せません');
     const sibs = n.isMember ? r.members : n.parent.children;
-    const name = uniqueName(sibs, n.isMember ? '新しい担当者' : '新しい要素');
+    const name = uniqueName(sibs, n.isMember ? '新しいメンバー' : '新しい要素');
     const at = n.isMember ? n.lineEnd : lastLineEnd(n);
     const parentLine = n.isMember ? null : mapPos([], n.parent.lineStart);
     return commit(r, [{ start: at, end: at, text: `\n${n.lead}- ${name}` }], {
       select: n.isMember ? { member: name } : { sec: n.sec, qname: `${qn(n.parent)}::${name}` },
-      expect: (r2) => (n.isMember ? (r2.parse.members.some((m) => m.name === name) ? null : '担当者を足せませんでした')
+      expect: (r2) => (n.isMember ? (r2.parse.members.some((m) => m.name === name) ? null : 'メンバーを足せませんでした')
         : (r2.parse.nodes.some((x) => x.name === name && x.parent && x.parent.lineStart === parentLine) ? null : '足した要素が兄弟として読めないので、書き換えませんでした(字下げをそろえてください)')),
     });
   }
@@ -1965,8 +1982,8 @@ const Edit = (() => {
   // 状態を変える(仕様書 11.2 節)。status: が書いてあれば値だけを置き換え、書いていないタスクで todo を選んだときは何も書き足さない
   function setStatus(r, id, v) {
     const n = find(r, id);
-    if (!n || n.sec !== 'WBS' || n.children.length || !n.parent) return fail('状態はタスク(末端の要素)にだけ書けます');
-    if (!Object.hasOwn(STATUS, v)) return fail(`状態「${v}」は書けません`);
+    if (!n || n.sec !== 'WBS' || n.children.length || !n.parent) return fail('進捗(status:)はタスク(末端の要素)にだけ書けます');
+    if (!Object.hasOwn(STATUS, v)) return fail(`進捗「${v}」は書けません`);
     if (v === 'todo' && !n.attrs.status) return { text: r.text, select: keyOf(n) };
     return setAttr(r, id, 'status', v);
   }

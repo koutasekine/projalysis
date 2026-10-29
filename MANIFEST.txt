@@ -1,18 +1,38 @@
-# projalysis v0.32(README の修正): 1 行目のプロジェクト計画へのリンクが「https://plan.sapp.jp)の」まで URL になっていたのを、明示したリンクに直した。ほかのファイルは v0.32 と同じ
-# すべて投入可。リポジトリのルートで展開する
-da95a8258ce72b80dd2dc04ede2ad1cb  index.html
+# プロジェクト分析 v0.59(仕様書 版 0.51)。リポジトリのルートに展開する。全ファイル投入可。
+# 変更: README・書き方(使い方)に「ほかのアプリとの関係」の節を足した(計画書の要・不要、組み合わせの例。組み合わせ方はプロジェクトを運営する人が決める)。仕様書 1.2 節にも同じ関係を書いた。コードの変更なし
+# 検査の期待値の変更: なし
+b84a309c5a14557889cd4a5a06e3f219  CNAME
 5ec64f26876e09835b1e5e225c805086  LICENSE
-e2cda8ac549be5e2364e1192bd360b1a  README.md
-bd3dd204cef829c60317a913e437886c  docs/spec.md
-80d7dfac7d725305a8343571df57e331  dev/core.js
-3270aed73a2d579dfd864c610d1a8658  dev/diff.js
-626a4283910deee0f2c99424b81b60bb  dev/ui.js
-d10e44754875b472ca54564944fc2110  dev/usage.html
-0e7a41f08c5ba79d0ab939b7f1aa9e15  dev/build.py
-e033dd758d0f12961cc9982d991ce85d  test/diff_test.cjs
-8a9b9c5b1a1cff52b8c68f170ef928d1  test/ui_test.py
+ca0fc2d7c3ac10243cbb73c9a127eab2  README.md
+114e93a8421ffbecdd30a88a318b7c65  dev/build.py
+2cfb2f3e65ac56f02435e821f147e7c4  dev/core.js
+b6db8a28354376c4205caf22eebd5711  dev/diff.js
+69924165a054f7e6110c0194de99c134  dev/logcore.js
+265bebc918c77d1197723b1c13b87621  dev/team.js
+e3d53591b82d01cdbb20a2d41ffafafe  dev/ui.js
+8d39f7bbdda218ef6119ea26f8eac8f3  dev/usage.html
+4a62eab2552d603be841190840322439  docs/spec.md
+89db9e0735b0a48bde961b19bb7c0b01  index.html
+f3bb78eccb9ad0f02c9f60ab8f60bbe4  test/diff_test.cjs
+3b104ee7ea57767287cd93184b6052d0  test/err.plan
+fc3245f8f33b9d54e53fe4227c5b4db7  test/flow/v1_src.plan
+e3ec3fff88ab876237c9afe45aca1dc5  test/flow/v2_src.plan
+7ede76413b037f9ce070142af8de0c04  test/flow/v3_src.plan
+5e5698f29df98580c273b874d9da7f01  test/flow/v3b_src.plan
+5f23f9eff56d4bb2360cde0ef92a3365  test/flow/v4_src.plan
+3b16d2a4f1308f53856de5dae0344684  test/flow/w4_上田.mylog
+427d195d64a185ae3a5c2930aaf764f1  test/flow/w4_井上.mylog
+7423c7295e2291d9204eb19885dcd903  test/flow/w4_江藤.mylog
+57f8e91fbc7cc942dc270e80c85d6ce1  test/flow/w4_青木.mylog
+ab6a8462b8056bcbd1ec44cc10851dd5  test/flow_test.cjs
+65e73bb531aeb0deb3b929788fca1e04  test/nover.plan
+fb1296f39bedadbc6d4be0e1b4e92b97  test/sample.plan
+ed8a237801d160f4001e1818213a916a  test/sample_aoki.mylog
+1435712c91f8003b98343939d551c6c9  test/sample_inoue.mylog
+274ed9f591432f7eab4df02597d4b86b  test/sample_old.plan
+717891ac7c7ecca3906908bc88593d49  test/sample_ueda.mylog
+30bf23032c54d4669967fb1e8c2b884f  test/team_test.cjs
+239bb3d471ac898c7705263984978632  test/ui_test.py
 460ef7701705d50fb0edf0b5f6837567  test/v1.plan
 41b2a0042450e332e67e332909af93f0  test/v2.plan
 d5e6fa744a6687c626accfd87e1a9c3c  test/v3.plan
-3b104ee7ea57767287cd93184b6052d0  test/err.plan
-65e73bb531aeb0deb3b929788fca1e04  test/nover.plan

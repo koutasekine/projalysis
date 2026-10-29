@@ -1,0 +1,48 @@
+by: 井上
+week: mon
+
+- 2026-11-02
+  - API設計 hours: 3 status: doing progress: 50
+- 2026-11-03
+  - API設計 hours: 4 status: done progress: 100 review: 上田
+  - 画面設計 reviewed: ok note: 画面遷移を確認した
+- 2026-11-04
+  - 書誌APIの実装 hours: 5 status: doing progress: 20
+- 2026-11-05
+  - 書誌APIの実装 hours: 5 progress: 50
+  - 本の登録 test: ok mop: ISBN から書名を 3 秒以内に表示する
+- 2026-11-06
+  - 書誌APIの実装 hours: 4 progress: 80
+  - 環境構築 hours: 2 note: CI を用意した
+- 2026-11-09
+  - 書誌APIの実装 hours: 4 status: done progress: 100 answered: 書誌の項目は ISBN・書名・著者
+- 2026-11-10
+  - 貸出APIの実装 answered: 返却日は任意にする
+  - 本の検索 test: ng mop: 書名の一部で検索できる
+- 2026-11-12
+  - 検索画面の実装 reviewed: ok
+- 2026-11-13
+  - 本の検索 test: ok mop: 書名の一部で検索できる
+  - 結合試験 hours: 2 note: 試験データの準備
+- 2026-11-16
+  - 貸出の結合試験 hours: 4 status: doing progress: 30
+- 2026-11-17
+  - 貸出の結合試験 hours: 5 progress: 60
+- 2026-11-18
+  - 書誌の結合試験 status: doing note: 上田さんを手伝った
+- 2026-11-19
+  - 貸出の結合試験 hours: 3 progress: 60
+- 2026-11-20
+  - 予約 test: ok mop: 貸出中の本を予約できる
+- 2026-11-24
+  - 予約APIの実装 hours: 5 status: doing progress: 30
+- 2026-11-25
+  - 総合試験 answered: 利用者は 5 人
+- 2026-11-26
+  - 貸出の結合試験 hours: 2 status: done progress: 100
+- 2026-11-27
+  - 予約APIの実装 hours: 5 progress: 70
+- 2026-11-30
+  - 予約APIの実装 hours: 4 status: done progress: 100
+- 2026-12-01
+  - 総合試験 reviewed: ok

@@ -94,7 +94,7 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
   const a = plan('2026-04-01', 'WBS: X\n- 甲 days: 1 by: A status: todo note: x\n- 乙 days: 1 by: A\n');
   const b = plan('2026-04-02', 'WBS: X\n- 甲 days: 1.5 by: A, B review: B status: done note: y\n- 乙 days: 1 by: A status: doing\n');
   const c = D.compare(a, b);
-  eq(c.tasks.changed, [{ key: '甲', items: [['日数', '1', '1.5'], ['作成者', 'A', 'A、B'], ['確認者', 'なし', 'B'], ['メモ', 'x', 'y']] }], '変わった項目');
+  eq(c.tasks.changed, [{ key: '甲', items: [['日数', '1', '1.5'], ['作成者', 'A', 'A・B'], ['確認者', 'なし', 'B'], ['メモ', 'x', 'y']] }], '変わった項目');
   eq(c.tasks.status, [{ key: '甲', from: '実行前', to: '完了' }, { key: '乙', from: '実行前', to: '実行中' }], '状態の変化を別にする');
   ok(!c.tasks.changed.some((x) => x.key === '乙'), '状態だけの変化が変わったタスクに入った');
 }
@@ -109,7 +109,8 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
 // ---- 日程・MOP・担当者(5.5〜5.7 節)
 {
   const a = plan('2026-04-01', 'WBS: X\n- 甲 days: 2 by: A\n- 乙 days: 1 by: A after: 甲\n');
-  const b = plan('2026-04-02', 'WBS: X\n- 甲 days: 4 by: A\n- 乙 days: 1 by: A after: 甲\n');
+  // 版の日付は開始日と同じにする(実行前のタスクを版の日付より前に置かない規則(プロジェクト計画の仕様書 6.3 節)と切り離して、日数の変更によるずれだけを見る)
+  const b = D.load('b.plan', head('2026-04-01') + 'WBS: X\n- 甲 days: 4 by: A\n- 乙 days: 1 by: A after: 甲\n');
   const c = D.compare(a, b);
   eq(c.sched.rows.map((s) => [s.key, s.a, s.b, s.diff]), [['甲', '2026-04-02', '2026-04-04', 2], ['乙', '2026-04-03', '2026-04-05', 2]], '日程のずれ');
   eq(c.sched.worst.map((s) => s.key), ['甲', '乙'], 'いちばん遅れたタスク(同じなら全部)');
@@ -145,15 +146,15 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
   ok(t.rows.find((r) => r.cells[0] === 'ファイル').cells.every((x) => typeof x === 'string'), 'ファイル名を太字にした');
   ok(t.rows.find((r) => r.cells[0] === 'タスク数').cells.some((x) => typeof x === 'object' && x.bold), '違う値が太字にならない');
   // 概要の総数の行(5.1 節)
-  eq(o.rows.map((r) => r.name), ['版', 'ファイル', '開始日', '期限', '全体の休み', 'クリティカルパスの長さ(日)', '日程の長さ(日)', '終了日', 'メンバー数', 'FBS 要素数', 'PBS 要素数', 'WBS 要素数', 'タスク数', '総日数', 'MOP 総数', '確認した MOP 数', '警告数'], '概要の行の並び');
+  eq(o.rows.map((r) => r.name), ['版', 'ファイル', '開始日', '期限', '全体の休み', 'クリティカルパスの長さ(日)', '日程の長さ(日)', '終了日', 'メンバー数', 'FBS の要素の数', 'PBS の要素の数', 'WBS の要素の数', 'タスク数', '総日数', 'MOP 総数', 'チェック済みの MOP 数', '警告数'], 'サマリーの行の並び');
   const v1 = list[0].r, val = (name) => o.rows.find((r) => r.name === name).values[0];
   const mops = v1.bySec.FBS.flatMap((n) => n.mopChecked);
-  eq([val('メンバー数'), val('FBS 要素数'), val('PBS 要素数'), val('WBS 要素数'), val('MOP 総数'), val('確認した MOP 数')],
+  eq([val('メンバー数'), val('FBS の要素の数'), val('PBS の要素の数'), val('WBS の要素の数'), val('MOP 総数'), val('チェック済みの MOP 数')],
     [String(v1.members.length), String(v1.bySec.FBS.length - 1), String(v1.bySec.PBS.length - 1), String(v1.bySec.WBS.length - 1), String(mops.length), String(mops.filter(Boolean).length)], '概要の総数(根を除く、MOP は確認済みを含む)');
-  ok(+val('WBS 要素数') > +val('タスク数') && +val('確認した MOP 数') <= +val('MOP 総数'), 'WBS 要素数はタスク数より多く、確認した MOP 数は MOP 総数以下');
+  ok(+val('WBS の要素の数') > +val('タスク数') && +val('チェック済みの MOP 数') <= +val('MOP 総数'), 'WBS の要素の数はタスク数より多く、チェック済みの MOP 数は MOP 総数以下');
   const noF = D.addEntries([], [plan('2026-04-01', 'WBS: X\n- t days: 1 by: A\n'), plan('2026-04-02', 'WBS: X\n- t days: 2 by: A\n')]).list;
   const on = D.overview(noF);
-  eq(['FBS 要素数', 'PBS 要素数', 'MOP 総数', '確認した MOP 数', 'WBS 要素数'].map((n) => on.rows.find((r) => r.name === n).values[0]), ['―', '―', '―', '―', '1'], 'FBS・PBS がない版の総数');
+  eq(['FBS の要素の数', 'PBS の要素の数', 'MOP 総数', 'チェック済みの MOP 数', 'WBS の要素の数'].map((n) => on.rows.find((r) => r.name === n).values[0]), ['―', '―', '―', '―', '1'], 'FBS・PBS がない版の総数');
 }
 // ---- 表のコピー(6.2 節)
 {
@@ -271,7 +272,7 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
   ], '状態が初めて変わった版(名前の変わったタスクはさかのぼらない)');
   const o = D.overlayData(list[0], list[3]);
   eq(o.rows.map((r) => r.key + r.suffix), ['設計::甲', '実装::乙', '実装::丙改(追加)', '試験::丁(追加)'], 'ガントチャートの行(増えたタスクは後の版の木の順)');
-  eq(o.unplanned, Math.round((2 / 8) * 100), '計画外のタスク');
+  eq(o.unplanned, Math.round((2 / 8) * 100), '追加したタスクの割合');
   const o2 = D.overlayData(list[1], list[3]);
   eq(o2.rows.map((r) => r.key + r.suffix), ['設計::甲', '実装::乙', '実装::丙改(追加)', '試験::丁(追加)', '実装::丙(削除)'], '消えたタスクを最後に並べる');
   eq([o2.removedDays, o2.pairDays], [1000, [6000, 6000]], '消えたタスクの日数と対応するタスクの日数');
@@ -288,11 +289,11 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
   const rc = D.render(list, 'gantt', [list[0], list[3]]);
   eq([rc.tables.map((x) => x.title), rc.figures.map((f) => f.id)], [['対応した要素'], ['gantt', 'gantt-people']], 'ガントチャートのビューのコピーの対象と図');
   ok(rc.figures[0].svg.includes('比較:'), 'ガントチャートの図の SVG に比較の版がない');
-  // 見積もりの変化は日程のビューの、タスクごとの終了日の後
+  // 見積もりの変化は日程のビューの、タスクごとの終了予定日の後
   const rs = D.render(list, 'sched', [list[0], list[3]]);
-  eq([rs.tables.map((x) => x.title), rs.figures.map((f) => f.id)], [['対応した要素', '最も遅れたタスク', 'タスクごとの終了日'], ['estimate']], '日程のビューのコピーの対象と図');
-  ok(rs.figures[0].svg.includes('計画外のタスク') && rs.figures[0].svg.includes('比較:'), '日程のビューの見積もりの図に数や版がない');
-  ok(rs.svg.indexOf('タスクごとの終了日') < rs.svg.indexOf('見積もりの変化'), '見積もりの変化がタスクごとの終了日の後にない');
+  eq([rs.tables.map((x) => x.title), rs.figures.map((f) => f.id)], [['対応した要素', '最も遅れたタスク', 'タスクごとの終了予定日'], ['estimate']], '日程のビューのコピーの対象と図');
+  ok(rs.figures[0].svg.includes('追加したタスクの割合') && rs.figures[0].svg.includes('比較:'), '日程のビューの見積もりの図に数や版がない');
+  ok(rs.svg.indexOf('タスクごとの終了予定日') < rs.svg.indexOf('見積もりの変化'), '見積もりの変化がタスクごとの終了予定日の後にない');
   eq(D.render(list, 'tasks', [list[0], list[3]]).figures, [], '図のないビューの図');
   // 図から選ぶ印(5.12 節)
   const sv = D.render(list, 'trend', null).svg;
@@ -342,7 +343,7 @@ const plan = (v, body) => D.load(`${v}.plan`, head(v) + body);
   const bad = D.load('bad.plan', 'version: 2026-04-04\nmembers:\n- A\nWBS: X\n# x\n');
   const list = D.addEntries([], [h1, h2, h3, bad, file('nover.plan')]).list;
   const h = D.revisionHistory(list);
-  eq(h.rows.map((r) => [r.cells[2], r.cells[3]]), [['―', '初版'], ['タスク', '追加'], ['タスク', '変更'], ['タスクの進捗', '変更'], ['FBS 要素', '追加'], ['MOP', '追加'], ['FBS の根の名前', '変更'], ['メンバー', '追加'], ['終了日', '変更'], ['―', '変更なし']], '改訂履歴の種類の並び');
+  eq(h.rows.map((r) => [r.cells[2], r.cells[3]]), [['―', '初版'], ['タスク', '追加'], ['タスク', '変更'], ['タスクの進捗', '変更'], ['FBS の要素', '追加'], ['MOP', '追加'], ['FBS の根の名前', '変更'], ['メンバー', '追加'], ['終了日', '変更'], ['―', '変更なし']], '改訂履歴の種類の並び');
   eq(h.rows.map((r) => r.cells[4]), [
     `タスク 1 件、終了日 ${P_fmt(h1.r.sched.finishDate)}`,
     '設計::乙', '設計::甲(日数 2 → 3)', '設計::甲(実行前 → 完了)', '通知(MOP: ✓ 届く)', '予定: 登録できる', 'F → G', 'C',
